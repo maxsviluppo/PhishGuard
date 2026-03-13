@@ -34,25 +34,9 @@ export default function App() {
   const [isParsingEmail, setIsParsingEmail] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const res = await fetch('/api/health');
-        if (res.ok) setBackendStatus('ok');
-        else setBackendStatus('error');
-      } catch (e) {
-        setBackendStatus('error');
-      }
-    };
-    checkHealth();
-    const interval = setInterval(checkHealth, 30000); // Check every 30s
-    return () => clearInterval(interval);
-  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,6 +101,13 @@ export default function App() {
     setError(null);
   };
 
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    setTooltipPos({ x: e.clientX, y: e.clientY });
+  };
+
   const getThreatColor = (level: string) => {
     switch (level) {
       case 'Low': return 'text-emerald-500 bg-emerald-50 border-emerald-200';
@@ -147,18 +138,6 @@ export default function App() {
               <h1 className="text-2xl font-black tracking-tight text-slate-900">
                 Phish<span className="text-indigo-600">Guard</span>
               </h1>
-              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                backendStatus === 'ok' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                backendStatus === 'error' ? 'bg-red-50 text-red-600 border-red-100' : 
-                'bg-slate-50 text-slate-400 border-slate-100'
-              }`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${
-                  backendStatus === 'ok' ? 'bg-emerald-500 animate-pulse' : 
-                  backendStatus === 'error' ? 'bg-red-500' : 
-                  'bg-slate-300'
-                }`} />
-                {backendStatus === 'ok' ? 'Online' : backendStatus === 'error' ? 'Offline' : 'Checking'}
-              </div>
             </div>
           </div>
 
@@ -396,8 +375,13 @@ export default function App() {
                       LIVELLO: {result.threatLevel}
                     </div>
                     
-                    <div className="relative inline-block mb-8">
-                      <svg className="w-40 h-40 transform -rotate-90 filter drop-shadow-lg">
+                    <div 
+                      className="relative inline-block mb-8 cursor-help"
+                      onMouseEnter={() => setShowTooltip(true)}
+                      onMouseLeave={() => setShowTooltip(false)}
+                      onMouseMove={handleMouseMove}
+                    >
+                      <svg className="w-40 h-40 transform -rotate-90 filter drop-shadow-lg overflow-visible">
                         <circle
                           cx="80"
                           cy="80"
@@ -407,25 +391,50 @@ export default function App() {
                           fill="transparent"
                           className="text-slate-100"
                         />
-                        <circle
+                        <motion.circle
                           cx="80"
                           cy="80"
                           r="72"
                           stroke="currentColor"
-                          strokeWidth="10"
+                          strokeWidth={showTooltip ? 14 : 10}
                           fill="transparent"
                           strokeDasharray={452.4}
-                          strokeDashoffset={452.4 - (452.4 * result.reliabilityScore) / 100}
-                          className={`${getScoreColor(result.reliabilityScore)} transition-all duration-1000 ease-out`}
+                          initial={{ strokeDashoffset: 452.4 }}
+                          animate={{ 
+                            strokeDashoffset: 452.4 - (452.4 * result.reliabilityScore) / 100,
+                            opacity: showTooltip ? 1 : 0.9
+                          }}
+                          transition={{ duration: 1.5, ease: "easeOut" }}
+                          className={`${getScoreColor(result.reliabilityScore)} transition-[stroke-width] duration-300`}
                           strokeLinecap="round"
                         />
                       </svg>
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
                         <span className={`text-4xl font-black tracking-tighter ${getScoreColor(result.reliabilityScore)}`}>
                           {result.reliabilityScore}%
                         </span>
                         <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mt-1">TRUST</p>
                       </div>
+
+                      <AnimatePresence>
+                        {showTooltip && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.5, y: 10 }}
+                            style={{ 
+                              position: 'fixed',
+                              left: tooltipPos.x + 15,
+                              top: tooltipPos.y - 40,
+                              zIndex: 100
+                            }}
+                            className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xl pointer-events-none flex items-center gap-2"
+                          >
+                            <div className={`w-2 h-2 rounded-full ${getScoreColor(result.reliabilityScore).replace('text-', 'bg-')}`} />
+                            Punteggio Esatto: {result.reliabilityScore}/100
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     <h3 className="text-2xl font-black text-slate-900 mb-4">Esito Analisi</h3>
