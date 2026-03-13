@@ -253,10 +253,12 @@ export default function App() {
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="bg-indigo-600 p-2 rounded-lg">
+              <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
                 <ShieldAlert className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">PhishGuard AI</h1>
+              <h1 className="text-2xl font-black tracking-tight text-slate-900">
+                Phish<span className="text-indigo-600">Guard</span>
+              </h1>
               <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                 backendStatus === 'ok' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
                 backendStatus === 'error' ? 'bg-red-50 text-red-600 border-red-100' : 
@@ -271,16 +273,16 @@ export default function App() {
               </div>
             </div>
             
-            <nav className="hidden md:flex items-center bg-slate-100 p-1 rounded-xl ml-4">
+            <nav className="hidden md:flex items-center bg-slate-100/50 p-1 rounded-2xl ml-6 border border-slate-200/50">
               <button 
                 onClick={() => setView('analyze')}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${view === 'analyze' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300 ${view === 'analyze' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
               >
                 Analisi
               </button>
               <button 
                 onClick={toggleArchive}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${view === 'archive' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 ${view === 'archive' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
               >
                 <History className="w-4 h-4" />
                 Archivio
@@ -313,28 +315,32 @@ export default function App() {
               {/* Input Section */}
               <section className="space-y-6">
                 {/* Email Import & Guide */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <Mail className="w-5 h-5 text-indigo-600" />
+                <div className="glass-card rounded-3xl p-8 transition-all hover:shadow-2xl hover:shadow-indigo-100/50">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold flex items-center gap-3 text-slate-800">
+                      <div className="p-2 bg-indigo-50 rounded-lg">
+                        <Mail className="w-5 h-5 text-indigo-600" />
+                      </div>
                       Importa da E-mail
                     </h2>
                     <div className="group relative">
-                      <button className="p-1.5 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600 transition-colors">
+                      <button className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600 transition-all hover:rotate-12">
                         <Info className="w-4 h-4" />
                       </button>
-                      <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-white rounded-xl shadow-xl border border-slate-100 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all z-20 text-xs text-slate-600 space-y-2 pointer-events-none">
-                        <p className="font-bold text-slate-900 mb-1">Come ottenere il file:</p>
-                        <p><strong>Gmail:</strong> Apri l'email, clicca sui tre puntini (⋮) e seleziona "Scarica messaggio".</p>
-                        <p><strong>Outlook:</strong> Apri l'email, clicca su "File" &gt; "Salva con nome" e scegli .eml.</p>
-                        <p><strong>Apple Mail:</strong> Vai su "File" &gt; "Salva come..." e scegli "Sorgente messaggio".</p>
+                      <div className="absolute right-0 top-full mt-3 w-72 p-5 bg-white rounded-2xl shadow-2xl border border-slate-100 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all z-30 text-sm text-slate-600 space-y-3 pointer-events-none">
+                        <p className="font-black text-slate-900 border-b border-slate-100 pb-2">Guida all'esportazione</p>
+                        <div className="space-y-2">
+                          <p><span className="font-bold text-indigo-600">Gmail:</span> Apri l'email, clicca su <span className="bg-slate-100 px-1 rounded">⋮</span> e seleziona <span className="italic">"Scarica messaggio"</span>.</p>
+                          <p><span className="font-bold text-indigo-600">Outlook:</span> Vai su <span className="italic">"File" &gt; "Salva con nome"</span> e scegli il formato <span className="font-mono text-[10px] bg-slate-100 px-1 rounded">.eml</span>.</p>
+                          <p><span className="font-bold text-indigo-600">Apple Mail:</span> <span className="italic">"File" &gt; "Salva come..."</span> e scegli <span className="italic">"Sorgente messaggio"</span>.</p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <div 
                     onClick={() => emailInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${isParsingEmail ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
+                    className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 flex flex-col items-center justify-center gap-4 group/drop ${isParsingEmail ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
                   >
                     <input 
                       type="file" 
@@ -345,26 +351,31 @@ export default function App() {
                     />
                     {isParsingEmail ? (
                       <>
-                        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                        <p className="text-sm text-indigo-600 font-bold">Estrazione dati in corso...</p>
+                        <div className="relative">
+                          <Loader2 className="w-12 h-12 animate-spin text-indigo-600" />
+                          <Mail className="w-5 h-5 text-indigo-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        </div>
+                        <p className="text-sm text-indigo-600 font-black tracking-wide animate-pulse">ESTRAZIONE INTELLIGENTE...</p>
                       </>
                     ) : (
                       <>
-                        <div className="p-3 bg-indigo-50 rounded-full">
-                          <Mail className="w-6 h-6 text-indigo-600" />
+                        <div className="p-4 bg-indigo-50 rounded-2xl group-hover/drop:scale-110 transition-transform duration-500 shadow-sm">
+                          <Mail className="w-8 h-8 text-indigo-600" />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-sm font-bold text-slate-700">Carica file .eml o .txt</p>
-                          <p className="text-xs text-slate-500">I dati verranno estratti e compilati automaticamente</p>
+                          <p className="text-base font-bold text-slate-800">Trascina qui il file .eml</p>
+                          <p className="text-xs text-slate-500 font-medium">I dati verranno analizzati istantaneamente</p>
                         </div>
                       </>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5 text-indigo-600" />
+                <div className="glass-card rounded-3xl p-8 shadow-sm">
+                  <h2 className="text-xl font-bold mb-6 flex items-center gap-3 text-slate-800">
+                    <div className="p-2 bg-indigo-50 rounded-lg">
+                      <MessageSquare className="w-5 h-5 text-indigo-600" />
+                    </div>
                     Dettagli Messaggio
                   </h2>
                   
@@ -450,17 +461,17 @@ export default function App() {
                   <button 
                     onClick={handleAnalyze}
                     disabled={isAnalyzing}
-                    className="w-full mt-8 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 group"
+                    className="w-full mt-8 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 disabled:from-slate-300 disabled:to-slate-300 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-200 transition-all duration-300 flex items-center justify-center gap-3 group active:scale-[0.98]"
                   >
                     {isAnalyzing ? (
                       <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Analisi in corso...
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        ANALISI IN CORSO...
                       </>
                     ) : (
                       <>
-                        Analizza Messaggio
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        ANALIZZA ORA
+                        <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform duration-300" />
                       </>
                     )}
                   </button>
@@ -512,44 +523,49 @@ export default function App() {
                       className="space-y-6"
                     >
                       {/* Score Card */}
-                      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 text-center">
-                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border ${getThreatColor(result.threatLevel)}`}>
-                          Livello Minaccia: {result.threatLevel}
+                      <div className="glass-card rounded-3xl p-10 shadow-sm text-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                          <ShieldAlert className="w-32 h-32" />
                         </div>
                         
-                        <div className="relative inline-block mb-6">
-                          <svg className="w-32 h-32 transform -rotate-90">
+                        <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-8 border-2 ${getThreatColor(result.threatLevel)}`}>
+                          LIVELLO: {result.threatLevel}
+                        </div>
+                        
+                        <div className="relative inline-block mb-8">
+                          <svg className="w-40 h-40 transform -rotate-90 filter drop-shadow-lg">
                             <circle
-                              cx="64"
-                              cy="64"
-                              r="58"
+                              cx="80"
+                              cy="80"
+                              r="72"
                               stroke="currentColor"
-                              strokeWidth="8"
+                              strokeWidth="10"
                               fill="transparent"
                               className="text-slate-100"
                             />
                             <circle
-                              cx="64"
-                              cy="64"
-                              r="58"
+                              cx="80"
+                              cy="80"
+                              r="72"
                               stroke="currentColor"
-                              strokeWidth="8"
+                              strokeWidth="10"
                               fill="transparent"
-                              strokeDasharray={364.4}
-                              strokeDashoffset={364.4 - (364.4 * result.reliabilityScore) / 100}
+                              strokeDasharray={452.4}
+                              strokeDashoffset={452.4 - (452.4 * result.reliabilityScore) / 100}
                               className={`${getScoreColor(result.reliabilityScore)} transition-all duration-1000 ease-out`}
+                              strokeLinecap="round"
                             />
                           </svg>
                           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                            <span className={`text-3xl font-black ${getScoreColor(result.reliabilityScore)}`}>
+                            <span className={`text-4xl font-black tracking-tighter ${getScoreColor(result.reliabilityScore)}`}>
                               {result.reliabilityScore}%
                             </span>
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-tighter">Affidabilità</p>
+                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mt-1">TRUST</p>
                           </div>
                         </div>
 
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">Risultato dell'Analisi</h3>
-                        <div className="text-slate-600 text-sm leading-relaxed prose prose-slate max-w-none">
+                        <h3 className="text-2xl font-black text-slate-900 mb-4">Esito Analisi</h3>
+                        <div className="text-slate-600 text-base leading-relaxed prose prose-slate max-w-none font-medium">
                           <Markdown>{result.summary}</Markdown>
                         </div>
                       </div>
