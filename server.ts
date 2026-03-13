@@ -7,24 +7,39 @@ import Database from "better-sqlite3";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Database
-const db = new Database("phishguard.db");
-db.exec(`
-  CREATE TABLE IF NOT EXISTS archive (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-    reliabilityScore INTEGER,
-    threatLevel TEXT,
-    summary TEXT,
-    sender TEXT,
-    redFlags TEXT,
-    recommendations TEXT
-  )
-`);
+// Initialize Database - Use /tmp for Vercel compatibility (ephemeral)
+const dbPath = process.env.VERCEL ? "/tmp/phishguard.db" : "phishguard.db";
+let db: any;
+
+try {
+  db = new Database(dbPath);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS archive (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      reliabilityScore INTEGER,
+      threatLevel TEXT,
+      summary TEXT,
+      sender TEXT,
+      redFlags TEXT,
+      recommendations TEXT
+    )
+  `);
+} catch (err) {
+  console.error("Failed to initialize database:", err);
+  // Fallback to a mock DB object to prevent crashes
+  db = {
+    prepare: () => ({
+      run: () => ({ lastInsertRowid: Date.now() }),
+      all: () => []
+    })
+  };
+}
+
+const app = express();
 
 async function startServer() {
-  const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json({ limit: '10mb' }));
 
@@ -103,6 +118,9 @@ async function startServer() {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
+
+// Export for Vercel
+export default app;
 
 startServer().catch((err) => {
   console.error("Failed to start server:", err);

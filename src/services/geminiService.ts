@@ -20,7 +20,7 @@ export interface EmailData {
 }
 
 export async function parseEmailContent(rawContent: string): Promise<EmailData> {
-  const model = "gemini-3.1-pro-preview";
+  const model = "gemini-3-flash-preview";
   
   const prompt = `
     Analizza il seguente contenuto grezzo di un'e-mail (formato EML o testo semplice) ed estrai le seguenti informazioni:
@@ -71,7 +71,7 @@ export async function analyzeMessage(
   links: string[],
   imageB64?: string
 ): Promise<AnalysisResult> {
-  const model = "gemini-3.1-pro-preview";
+  const model = "gemini-3-flash-preview";
   
   const prompt = `
     Analizza questo messaggio per potenziale phishing, smishing o altre minacce informatiche.
