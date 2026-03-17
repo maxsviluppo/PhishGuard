@@ -29,14 +29,70 @@ export default function App() {
   const [text, setText] = useState('');
   const [sender, setSender] = useState('');
   const [links, setLinks] = useState('');
+  const [urlToAnalyze, setUrlToAnalyze] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isParsingEmail, setIsParsingEmail] = useState(false);
+  const [isFetchingGmail, setIsFetchingGmail] = useState(false);
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) setBackendStatus('ok');
+        else setBackendStatus('error');
+      } catch (e) {
+        setBackendStatus('error');
+      }
+    };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000); // Check every 30s
+
+    const checkGoogleStatus = async () => {
+      try {
+        const res = await fetch('/api/auth/google/status');
+        const data = await res.json();
+        setIsGoogleConnected(data.connected);
+      } catch (e) {
+        console.error("Failed to check Google status");
+      }
+    };
+    checkGoogleStatus();
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+        setIsGoogleConnected(true);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  const handleGoogleConnect = async () => {
+    try {
+      const res = await fetch('/api/auth/google/url');
+      const { url } = await res.json();
+      window.open(url, 'google_auth', 'width=600,height=700');
+    } catch (e) {
+      setError('Impossibile avviare la connessione con Google.');
+    }
+  };
+
+  const handleGoogleLogout = async () => {
+    await fetch('/api/auth/google/logout', { method: 'POST' });
+    setIsGoogleConnected(false);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,8 +127,49 @@ export default function App() {
   };
 
   const handleAnalyze = async () => {
-    if (!text && !image) {
-      setError('Per favore, inserisci un testo o carica un\'immagine del messaggio.');
+    let contentToAnalyze = text;
+    let senderToAnalyze = sender;
+
+    if (urlToAnalyze) {
+      setIsAnalyzing(true);
+      setError(null);
+      
+      // Check if it's a Gmail URL
+      if (urlToAnalyze.includes('mail.google.com')) {
+        if (!isGoogleConnected) {
+          setError('Per analizzare un URL di Gmail, devi prima collegare il tuo account Google.');
+          setIsAnalyzing(false);
+          return;
+        }
+        
+        setIsFetchingGmail(true);
+        try {
+          const res = await fetch('/api/gmail/fetch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: urlToAnalyze })
+          });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          
+          contentToAnalyze = data.content;
+          senderToAnalyze = data.metadata.from;
+          setText(data.content);
+          setSender(data.metadata.from);
+        } catch (err: any) {
+          setError(err.message || 'Errore durante il recupero dell\'email da Gmail.');
+          setIsAnalyzing(false);
+          setIsFetchingGmail(false);
+          return;
+        } finally {
+          setIsFetchingGmail(false);
+        }
+      }
+    }
+
+    if (!contentToAnalyze && !image && !urlToAnalyze) {
+      setError('Per favore, inserisci un testo, carica un\'immagine o incolla un URL da analizzare.');
+      setIsAnalyzing(false);
       return;
     }
 
@@ -82,7 +179,13 @@ export default function App() {
 
     try {
       const linkList = links.split(',').map(l => l.trim()).filter(l => l !== '');
-      const analysis = await analyzeMessage(text, sender, linkList, image || undefined);
+      const analysis = await analyzeMessage(
+        contentToAnalyze, 
+        senderToAnalyze, 
+        linkList, 
+        image || undefined,
+        urlToAnalyze && !urlToAnalyze.includes('mail.google.com') ? urlToAnalyze : undefined
+      );
       setResult(analysis);
     } catch (err) {
       setError('Si è verificato un errore durante l\'analisi. Riprova.');
@@ -96,6 +199,7 @@ export default function App() {
     setText('');
     setSender('');
     setLinks('');
+    setUrlToAnalyze('');
     setImage(null);
     setResult(null);
     setError(null);
@@ -127,6 +231,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-indigo-100">
+      {/* Developer Setup Overlay (Only if keys are missing) */}
+      {!isGoogleConnected && !process.env.GOOGLE_CLIENT_ID && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-amber-800 text-sm font-medium">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <span>
+                <strong>Configurazione Richiesta:</strong> Per analizzare gli URL di Gmail, devi configurare le API di Google nei <strong>Settings</strong> di AI Studio.
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <a 
+                href="https://console.cloud.google.com/apis/credentials/oauthclient" 
+                target="_blank" 
+                rel="noreferrer"
+                className="text-xs bg-amber-200 hover:bg-amber-300 text-amber-900 px-3 py-1.5 rounded-lg font-bold transition-colors"
+              >
+                Ottieni Chiavi
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -138,10 +266,48 @@ export default function App() {
               <h1 className="text-2xl font-black tracking-tight text-slate-900">
                 Phish<span className="text-indigo-600">Guard</span>
               </h1>
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                backendStatus === 'ok' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                backendStatus === 'error' ? 'bg-red-50 text-red-600 border-red-100' : 
+                'bg-slate-50 text-slate-400 border-slate-100'
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  backendStatus === 'ok' ? 'bg-emerald-500 animate-pulse' : 
+                  backendStatus === 'error' ? 'bg-red-500' : 
+                  'bg-slate-300'
+                }`} />
+                {backendStatus === 'ok' ? 'Online' : backendStatus === 'error' ? 'Offline' : 'Checking'}
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
+            {isGoogleConnected ? (
+              <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                  G
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Account</p>
+                  <p className="text-xs font-bold text-slate-700">Google Connesso</p>
+                </div>
+                <button 
+                  onClick={handleGoogleLogout}
+                  className="text-slate-400 hover:text-red-500 transition-colors"
+                  title="Disconnetti Google"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={handleGoogleConnect}
+                className="bg-white border border-slate-200 hover:border-indigo-300 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 shadow-sm transition-all flex items-center gap-2"
+              >
+                <div className="w-4 h-4 bg-indigo-600 rounded-full flex items-center justify-center text-[10px] text-white">G</div>
+                Connetti Google
+              </button>
+            )}
             <button 
               onClick={reset}
               className="text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-2 text-sm font-medium"
@@ -247,6 +413,27 @@ export default function App() {
                       className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-slate-50"
                     />
                   </div>
+                </div>
+
+                {/* Links Input */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Analizza da URL (Web Email o Link Sospetto)</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text"
+                      value={urlToAnalyze}
+                      onChange={(e) => setUrlToAnalyze(e.target.value)}
+                      placeholder="Incolla l'URL di Gmail o un link da verificare..."
+                      className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-slate-50"
+                    />
+                  </div>
+                  {urlToAnalyze.includes('mail.google.com') && !isGoogleConnected && (
+                    <p className="text-[10px] text-amber-600 mt-1 font-bold flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      Connetti Google in alto per analizzare questo URL di Gmail
+                    </p>
+                  )}
                 </div>
 
                 {/* Links Input */}

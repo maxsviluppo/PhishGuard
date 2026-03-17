@@ -69,7 +69,8 @@ export async function analyzeMessage(
   text: string,
   sender: string,
   links: string[],
-  imageB64?: string
+  imageB64?: string,
+  urlContext?: string
 ): Promise<AnalysisResult> {
   const model = "gemini-3-flash-preview";
   
@@ -80,7 +81,9 @@ export async function analyzeMessage(
     - Testo del messaggio: ${text || "Non fornito"}
     - Mittente dichiarato: ${sender || "Non fornito"}
     - Link inclusi: ${links.join(", ") || "Nessuno"}
+    ${urlContext ? `- URL da analizzare: ${urlContext}` : ""}
     
+    Se è presente un URL nel contesto, analizza il contenuto di quella pagina per verificare se si tratta di un'e-mail web o di un sito sospetto.
     Se è presente un'immagine, analizzala per cercare elementi visivi sospetti (loghi contraffatti, errori di formattazione, urgenza artificiale).
     
     Restituisci un'analisi dettagliata in formato JSON con i seguenti campi:
@@ -104,10 +107,16 @@ export async function analyzeMessage(
     });
   }
 
+  const tools: any[] = [];
+  if (urlContext) {
+    tools.push({ urlContext: {} });
+  }
+
   const response = await ai.models.generateContent({
     model,
     contents: [{ parts }],
     config: {
+      tools,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
