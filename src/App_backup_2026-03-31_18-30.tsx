@@ -47,8 +47,6 @@ import {
   Table,
   FileText,
   FileCode,
-  Tag,
-  CreditCard,
   Truck,
   ListFilter,
   LayoutGrid,
@@ -76,7 +74,7 @@ import { PRODUCTS, CATEGORIES, SUBCATEGORIES } from "./data";
 import { Product, CartItem } from "./types";
 import { AdminSingleProduct } from "./AdminSingleProduct";
 import { AdminMassiveImport } from "./AdminMassiveImport";
-import { AdminOrders, INITIAL_ORDERS } from "./AdminOrders";
+import { AdminOrders } from "./AdminOrders";
 import { AdminCouriers } from "./AdminCouriers";
 import { AdminReturns } from "./AdminReturns";
 import { AdminUsers } from "./AdminUsers";
@@ -169,7 +167,7 @@ const CartSplash = ({ trigger, isMenuHidden, count }: { trigger: number; isMenuH
   );
 };
 
-function ProductCard({ product, onClick, onAddToCart, index }: { product: Product; onClick: () => void; onAddToCart: (p: Product) => void; index: number; key?: string }) {
+function ProductCard({ product, onClick, onAddToCart, index }: { product: Product; onClick: () => void; onAddToCart: (p: Product) => void; index: number }) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -177,7 +175,7 @@ function ProductCard({ product, onClick, onAddToCart, index }: { product: Produc
       viewport={{ once: true, margin: "-50px" }}
       transition={{ 
         duration: 0.5, 
-        delay: index * 0.05,
+        delay: (index % 4) * 0.1,
         ease: [0.21, 1.02, 0.73, 1]
       }}
       whileHover={{ y: -5, transition: { duration: 0.2 } }}
@@ -187,7 +185,7 @@ function ProductCard({ product, onClick, onAddToCart, index }: { product: Produc
       <motion.div 
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: index * 0.05 + 0.2 }}
+        transition={{ delay: (index % 4) * 0.1 + 0.2 }}
         onClick={onClick}
         className="aspect-square mb-3 cursor-pointer overflow-hidden rounded-lg bg-gray-50"
       >
@@ -198,7 +196,7 @@ function ProductCard({ product, onClick, onAddToCart, index }: { product: Produc
       <motion.h3 
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: index * 0.05 + 0.3 }}
+        transition={{ delay: (index % 4) * 0.1 + 0.3 }}
         onClick={onClick}
         className="text-sm font-medium text-brand-dark line-clamp-2 mb-1 cursor-pointer hover:text-brand-yellow"
       >
@@ -207,7 +205,7 @@ function ProductCard({ product, onClick, onAddToCart, index }: { product: Produc
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: index * 0.05 + 0.4 }}
+        transition={{ delay: (index % 4) * 0.1 + 0.4 }}
         className="flex items-center gap-1 mb-2"
       >
         <div className="flex">
@@ -221,7 +219,7 @@ function ProductCard({ product, onClick, onAddToCart, index }: { product: Produc
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: index * 0.05 + 0.5 }}
+          transition={{ delay: (index % 4) * 0.1 + 0.5 }}
           className="flex items-baseline gap-1 mb-3"
         >
           <span className="text-xs font-bold align-top">€</span>
@@ -231,7 +229,7 @@ function ProductCard({ product, onClick, onAddToCart, index }: { product: Produc
         <motion.button 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05 + 0.6 }}
+          transition={{ delay: (index % 4) * 0.1 + 0.6 }}
           onClick={() => onAddToCart(product)}
           className="w-full bg-brand-yellow hover:bg-brand-orange text-brand-dark py-2 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all"
         >
@@ -632,820 +630,11 @@ const ProductSheet = ({ product, onClose, onAddToCart, isDesktop }: { product: P
   );
 };
 
-const ITALIAN_PROVINCES = [
-  { code: 'AG', name: 'Agrigento' }, { code: 'AL', name: 'Alessandria' }, { code: 'AN', name: 'Ancona' },
-  { code: 'AO', name: 'Aosta' }, { code: 'AR', name: 'Arezzo' }, { code: 'AP', name: 'Ascoli Piceno' },
-  { code: 'AT', name: 'Asti' }, { code: 'AV', name: 'Avellino' }, { code: 'BA', name: 'Bari' },
-  { code: 'BT', name: 'Barletta-Andria-Trani' }, { code: 'BL', name: 'Belluno' }, { code: 'BN', name: 'Benevento' },
-  { code: 'BG', name: 'Bergamo' }, { code: 'BI', name: 'Biella' }, { code: 'BO', name: 'Bologna' },
-  { code: 'BZ', name: 'Bolzano' }, { code: 'BS', name: 'Brescia' }, { code: 'BR', name: 'Brindisi' },
-  { code: 'CA', name: 'Cagliari' }, { code: 'CL', name: 'Caltanissetta' }, { code: 'CB', name: 'Campobasso' },
-  { code: 'CI', name: 'Carbonia-Iglesias' }, { code: 'CE', name: 'Caserta' }, { code: 'CT', name: 'Catania' },
-  { code: 'CZ', name: 'Catanzaro' }, { code: 'CH', name: 'Chieti' }, { code: 'CO', name: 'Como' },
-  { code: 'CS', name: 'Cosenza' }, { code: 'CR', name: 'Cremona' }, { code: 'KR', name: 'Crotone' },
-  { code: 'CN', name: 'Cuneo' }, { code: 'EN', name: 'Enna' }, { code: 'FM', name: 'Fermo' },
-  { code: 'FE', name: 'Ferrara' }, { code: 'FI', name: 'Firenze' }, { code: 'FG', name: 'Foggia' },
-  { code: 'FC', name: 'Forlì-Cesena' }, { code: 'FR', name: 'Frosinone' }, { code: 'GE', name: 'Genova' },
-  { code: 'GO', name: 'Gorizia' }, { code: 'GR', name: 'Grosseto' }, { code: 'IM', name: 'Imperia' },
-  { code: 'IS', name: 'Isernia' }, { code: 'SP', name: 'La Spezia' }, { code: 'AQ', name: 'L\'Aquila' },
-  { code: 'LT', name: 'Latina' }, { code: 'LE', name: 'Lecce' }, { code: 'LC', name: 'Lecco' },
-  { code: 'LI', name: 'Livorno' }, { code: 'LO', name: 'Lodi' }, { code: 'LU', name: 'Lucca' },
-  { code: 'MC', name: 'Macerata' }, { code: 'MN', name: 'Mantova' }, { code: 'MS', name: 'Massa-Carrara' },
-  { code: 'MT', name: 'Matera' }, { code: 'VS', name: 'Medio Campidano' }, { code: 'ME', name: 'Messina' },
-  { code: 'MI', name: 'Milano' }, { code: 'MO', name: 'Modena' }, { code: 'MB', name: 'Monza e della Brianza' },
-  { code: 'NA', name: 'Napoli' }, { code: 'NO', name: 'Novara' }, { code: 'NU', name: 'Nuoro' },
-  { code: 'OG', name: 'Ogliastra' }, { code: 'OT', name: 'Olbia-Tempio' }, { code: 'OR', name: 'Oristano' },
-  { code: 'PD', name: 'Padova' }, { code: 'PA', name: 'Palermo' }, { code: 'PR', name: 'Parma' },
-  { code: 'PV', name: 'Pavia' }, { code: 'PG', name: 'Perugia' }, { code: 'PU', name: 'Pesaro e Urbino' },
-  { code: 'PE', name: 'Pescara' }, { code: 'PC', name: 'Piacenza' }, { code: 'PI', name: 'Pisa' },
-  { code: 'PT', name: 'Pistoia' }, { code: 'PN', name: 'Pordenone' }, { code: 'PZ', name: 'Potenza' },
-  { code: 'PO', name: 'Prato' }, { code: 'RG', name: 'Ragusa' }, { code: 'RA', name: 'Ravenna' },
-  { code: 'RC', name: 'Reggio Calabria' }, { code: 'RE', name: 'Reggio Emilia' }, { code: 'RI', name: 'Rieti' },
-  { code: 'RN', name: 'Rimini' }, { code: 'RM', name: 'Roma' }, { code: 'RO', name: 'Rovigo' },
-  { code: 'SA', name: 'Salerno' }, { code: 'SS', name: 'Sassari' }, { code: 'SV', name: 'Savona' },
-  { code: 'SI', name: 'Siena' }, { code: 'SR', name: 'Siracusa' }, { code: 'SO', name: 'Sondrio' },
-  { code: 'TA', name: 'Taranto' }, { code: 'TE', name: 'Teramo' }, { code: 'TR', name: 'Terni' },
-  { code: 'TO', name: 'Torino' }, { code: 'TP', name: 'Trapani' }, { code: 'TN', name: 'Trento' },
-  { code: 'TV', name: 'Treviso' }, { code: 'TS', name: 'Trieste' }, { code: 'UD', name: 'Udine' },
-  { code: 'VA', name: 'Varese' }, { code: 'VE', name: 'Venezia' }, { code: 'VB', name: 'Verbano-Cusio-Ossola' },
-  { code: 'VC', name: 'Vercelli' }, { code: 'VR', name: 'Verona' }, { code: 'VV', name: 'Vibo Valentia' },
-  { code: 'VI', name: 'Vicenza' }, { code: 'VT', name: 'Viterbo' }
-];
-
-const PREDEFINED_CITIES = [
-  "Roma", "Milano", "Napoli", "Torino", "Palermo", "Genova", "Bologna", "Firenze", "Bari", "Catania", 
-  "Venezia", "Verona", "Messina", "Padova", "Trieste", "Taranto", "Brescia", "Parma", "Prato", "Modena", 
-  "Reggio Calabria", "Reggio Emilia", "Perugia", "Ravenna", "Livorno", "Cagliari", "Foggia", "Rimini", 
-  "Salerno", "Ferrara"
-].sort();
-
-const CheckoutSheet = ({ 
-  items, 
-  onClose, 
-  settings, 
-  currentUser,
-  onAuthOpen,
-  appOrders,
-  setAppOrders,
-  setCart,
-  companySettings
-}: { 
-  items: CartItem[]; 
-  onClose: () => void; 
-  settings: any;
-  currentUser: any;
-  onAuthOpen: () => void;
-  appOrders: any[];
-  setAppOrders: (orders: any[]) => void;
-  setCart: (cart: any[]) => void;
-  companySettings: any;
-}) => {
-  const [shippingForm, setShippingForm] = useState({
-    name: currentUser?.name || '',
-    street: currentUser?.addressStreet || '',
-    city: currentUser?.addressCity || '',
-    zip: currentUser?.addressZip || '',
-    province: currentUser?.addressProvince || '',
-    phone: currentUser?.phone || '',
-    email: currentUser?.email || '',
-    notes: '',
-    isCustomCity: false
-  });
-
-  const [orderId] = useState(() => `BP-${new Date().getFullYear()}-${Math.floor(Math.random() * 899 + 100)}`);
-
-  const [step, setStep] = useState<'shipping' | 'methods' | 'details' | 'success'>(
-    (currentUser?.addressStreet && currentUser?.addressCity) ? 'methods' : 'shipping'
-  );
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  useEffect(() => {
-    if (currentUser) {
-      setShippingForm(prev => ({
-        ...prev,
-        name: currentUser.name || prev.name,
-        email: currentUser.email || prev.email,
-        phone: currentUser.phone || prev.phone,
-        street: currentUser.addressStreet || prev.street,
-        city: currentUser.addressCity || prev.city,
-        zip: currentUser.addressZip || prev.zip,
-        province: currentUser.addressProvince || prev.province,
-        isCustomCity: currentUser.addressCity && !PREDEFINED_CITIES.includes(currentUser.addressCity)
-      }));
-    }
-  }, [currentUser]);
-
-  const handleConfirmOrder = () => {
-    if (!currentUser) {
-      onAuthOpen();
-      return;
-    }
-    
-    setIsProcessing(true);
-    
-    // Simula tempo di transazione
-    setTimeout(() => {
-      const newOrder = {
-        id: orderId,
-        date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }),
-        customer: shippingForm.name || currentUser?.name || "Cliente Registrato",
-        email: shippingForm.email || currentUser?.email || "guest@bespoint.it",
-        phone: shippingForm.phone,
-        channel: 'website',
-        total: total,
-        status: 'pending',
-        itemsCount: items.length,
-        address: `${shippingForm.street}, ${shippingForm.city} (${shippingForm.province}) - CAP ${shippingForm.zip}`,
-        notes: shippingForm.notes,
-        payment: selectedMethod === 'stripe' ? 'Carta di Credito (Stripe)' : 
-                 selectedMethod === 'paypal' ? 'PayPal' : 
-                 selectedMethod === 'cod' ? 'Contrassegno' : 'Bonifico Bancario',
-        paymentType: selectedMethod, // Helps in filtering
-        items: items.map(item => ({ 
-          id: item.id, 
-          name: item.name, 
-          qty: item.quantity, 
-          price: item.price, 
-          image: item.image 
-        }))
-      };
-
-      setAppOrders([newOrder, ...appOrders]);
-      setCart([]);
-      setIsProcessing(false);
-      setStep('success');
-    }, 1500);
-  };
-  const handlePrintProforma = () => {
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) return;
-
-    const methodLabel = selectedMethod === 'stripe' ? 'Carta di Credito / GPay' 
-      : selectedMethod === 'paypal' ? 'PayPal' 
-      : selectedMethod === 'bank' ? 'Bonifico Bancario' 
-      : 'Contrassegno';
-
-    const itemsHTML = items.map(item => `
-      <tr>
-        <td style="padding:8px 4px;border-bottom:1px solid #f0f0f0;">
-          ${item.image ? `<img src="${item.image}" style="width:36px;height:36px;object-fit:contain;border-radius:4px;border:1px solid #eee;" />` : ''}
-        </td>
-        <td style="padding:8px 4px;border-bottom:1px solid #f0f0f0;">
-          <strong style="font-size:12px;color:#0a0a0a;">${item.name}</strong>
-          <div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;">SKU-${item.id.padStart(4,'0')}</div>
-        </td>
-        <td style="padding:8px 4px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:12px;">&euro;${item.price.toFixed(2)}</td>
-        <td style="padding:8px 4px;border-bottom:1px solid #f0f0f0;text-align:center;">
-          <span style="background:#f5f5f5;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:900;">${item.quantity}</span>
-        </td>
-        <td style="padding:8px 4px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:900;font-size:12px;">&euro;${(item.price*item.quantity).toFixed(2)}</td>
-      </tr>
-    `).join('');
-
-    const bankHTML = selectedMethod === 'bank' ? `
-      <div style="background:#fffde7;border:1px solid #ffd600;border-radius:8px;padding:12px;margin-top:16px;">
-        <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px;">Dati per il Bonifico</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div><div style="font-size:8px;color:#aaa;text-transform:uppercase;">Beneficiario</div><strong style="font-size:12px;">${settings.bankOwner || 'BESPOINT S.R.L.'}</strong></div>
-          <div><div style="font-size:8px;color:#aaa;text-transform:uppercase;">IBAN</div><strong style="font-size:12px;letter-spacing:1px;">${settings.bankIban || '—'}</strong></div>
-        </div>
-      </div>` : selectedMethod === 'cod' ? `
-      <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:8px;padding:12px;margin-top:16px;">
-        <div style="font-size:10px;font-weight:700;color:#b45309;">${settings.codNote || 'Pagamento in contanti direttamente al corriere alla consegna.'}</div>
-      </div>` : '';
-
-    const logoHTML = companySettings.imageLogo 
-      ? `<img src="${companySettings.imageLogo}" style="height:60px;object-fit:contain;" referrerpolicy="no-referrer" />`
-      : `<div style="width:52px;height:52px;background:#ffd600;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;font-style:italic;">${companySettings.logo}</div>`;
-
-    const html = `<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <title>Proforma Ordine — ${companySettings.name}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-    * { margin:0;padding:0;box-sizing:border-box; }
-    body { font-family:'Inter',sans-serif;background:white;color:#0a0a0a;padding:24px 32px; }
-    table { width:100%;border-collapse:collapse; }
-    @media print {
-      @page { size:A4 portrait;margin:12mm 14mm; }
-      body { padding:0; }
-    }
-  </style>
-</head>
-<body>
-  <!-- HEADER -->
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;border-bottom:3px solid #ffd600;margin-bottom:20px;">
-    <div style="display:flex;align-items:center;gap:14px;">
-      ${logoHTML}
-      <div>
-        <div style="font-weight:900;font-size:18px;text-transform:uppercase;letter-spacing:-0.5px;">${companySettings.name}</div>
-        <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">${companySettings.legalName || ''}</div>
-      </div>
-    </div>
-      <div style="text-align:right;">
-      <div style="font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:-1px;">PROFORMA</div>
-      <div style="font-size:12px;font-weight:900;color:#2563eb;">#${orderId}</div>
-      <div style="font-size:9px;color:#888;text-transform:uppercase;">${new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'long',year:'numeric'})}</div>
-    </div>
-  </div>
-
-  <!-- ANAGRAFICA + SPEDIZIONE -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-    <div style="background:#fafafa;border:1px solid #eee;border-radius:8px;padding:12px;">
-      <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px;">Cliente</div>
-      <div style="font-weight:900;font-size:13px;">${shippingForm.name}</div>
-      <div style="font-size:10px;color:#555;margin-top:2px;">${shippingForm.email}</div>
-      <div style="font-size:10px;color:#2563eb;font-weight:700;">${shippingForm.phone}</div>
-    </div>
-    <div style="background:#fafafa;border:1px solid #eee;border-radius:8px;padding:12px;">
-      <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px;">Destinazione merce</div>
-      <div style="font-weight:700;font-size:12px;">${shippingForm.street}</div>
-      <div style="font-size:10px;color:#555;">${shippingForm.zip} ${shippingForm.city} (${shippingForm.province})</div>
-      ${shippingForm.notes ? `<div style="font-size:9px;color:#ca8a04;margin-top:4px;font-weight:700;">NOTE: ${shippingForm.notes}</div>` : ''}
-    </div>
-  </div>
-
-  <!-- PAGAMENTO -->
-  <div style="background:#0a0a0a;color:white;border-radius:8px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <div>
-      <div style="font-size:8px;color:#888;text-transform:uppercase;letter-spacing:1px;">Metodo di Pagamento</div>
-      <div style="font-weight:900;font-size:13px;color:#ffd600;">${methodLabel}</div>
-    </div>
-    <div style="font-size:9px;border:1px solid rgba(255,214,0,0.3);background:rgba(255,214,0,0.1);color:#ffd600;padding:3px 10px;border-radius:99px;font-weight:900;text-transform:uppercase;">In attesa</div>
-  </div>
-
-  <!-- PRODOTTI -->
-  <table>
-    <thead>
-      <tr style="background:#f5f5f5;">
-        <th style="padding:8px 4px;font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;font-weight:700;width:44px;"></th>
-        <th style="padding:8px 4px;font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;font-weight:700;text-align:left;">Articolo</th>
-        <th style="padding:8px 4px;font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;font-weight:700;text-align:center;">Prezzo</th>
-        <th style="padding:8px 4px;font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;font-weight:700;text-align:center;">Qt</th>
-        <th style="padding:8px 4px;font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;font-weight:700;text-align:right;">Totale</th>
-      </tr>
-    </thead>
-    <tbody>${itemsHTML}</tbody>
-  </table>
-
-  <!-- TOTALI -->
-  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:16px;padding-top:12px;border-top:2px solid #f0f0f0;">
-    <div style="display:flex;justify-content:space-between;width:200px;font-size:10px;color:#888;">
-      <span>Subtotale</span><span style="color:#0a0a0a;font-weight:700;">&euro;${total.toFixed(2)}</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;width:200px;font-size:10px;color:#16a34a;font-weight:700;">
-      <span>Spedizione</span><span>&euro;0,00</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;width:220px;background:#ffd600;padding:10px 16px;border-radius:10px;margin-top:4px;">
-      <span style="font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Totale Ordine</span>
-      <span style="font-weight:900;font-size:18px;">&euro;${total.toFixed(2)}</span>
-    </div>
-  </div>
-
-  ${bankHTML}
-
-  <!-- FOOTER -->
-  <div style="margin-top:32px;padding-top:12px;border-top:1px solid #eee;font-size:8px;color:#aaa;text-align:center;">
-    Documento proforma generato automaticamente da ${companySettings.name}. Non costituisce fattura fiscale.
-    La fattura elettronica sarà emessa e trasmessa tramite SDI al momento della spedizione.
-  </div>
-</body>
-</html>`;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => { printWindow.print(); }, 600);
-  };
-
-  if (step === 'success') {
-    return (
-      <>
-        <motion.div 
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
-        />
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none"
-        >
-          <div className="bg-white rounded-[3rem] p-12 text-center max-w-sm shadow-2xl space-y-6 pointer-events-auto">
-            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto text-white">
-              <Check className="w-12 h-12" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-black text-brand-dark uppercase tracking-tighter">Ordine Ricevuto!</h2>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">Grazie per aver scelto BesPoint</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-              <p className="text-[10px] font-black uppercase text-gray-400">ID Ordine Web</p>
-              <p className="text-lg font-black text-brand-dark">{orderId}</p>
-            </div>
-            <button 
-              onClick={onClose}
-              className="w-full py-4 bg-brand-dark text-brand-yellow rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-brand-yellow hover:text-brand-dark transition-all"
-            >
-              Torna alla Home
-            </button>
-          </div>
-        </motion.div>
-      </>
-    );
-  }
-  return (
-    <>
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
-      />
-      <motion.div 
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed bottom-0 left-0 right-0 max-h-[90vh] bg-white rounded-t-[40px] z-[101] shadow-2xl flex flex-col lg:inset-y-0 lg:right-0 lg:left-auto lg:w-full lg:max-w-2xl lg:rounded-none"
-      >
-        <div className="p-8 flex items-center justify-between border-b border-gray-100">
-          <div>
-            <h2 className="text-2xl font-black text-brand-dark uppercase tracking-tighter">Checkout</h2>
-            <p className="text-xs text-secondary font-bold uppercase tracking-widest">{items.length} articoli • Totale €{total.toFixed(2)}</p>
-          </div>
-          <button onClick={onClose} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Checkout Stepper */}
-        <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between relative overflow-hidden bg-gray-50/30">
-          <div className="absolute top-[38px] left-16 right-16 h-1 bg-gray-100 rounded-full">
-            <motion.div 
-               initial={{ width: 0 }}
-               animate={{ width: step === 'shipping' ? '0%' : step === 'methods' ? '50%' : '100%' }}
-               className="h-full bg-brand-yellow rounded-full shadow-[0_0_10px_rgba(255,214,0,0.4)]"
-            />
-          </div>
-          
-          {[
-            { id: 1, label: 'Spedizione', s: 'shipping' },
-            { id: 2, label: 'Pagamento', s: 'methods' },
-            { id: 3, label: 'Conferma', s: 'details' }
-          ].map((s, idx) => {
-            const currentStepNum = step === 'shipping' ? 1 : step === 'methods' ? 2 : 3;
-            const isCompleted = currentStepNum > s.id;
-            const isActive = currentStepNum === s.id;
-            
-            return (
-              <div key={s.id} className="relative z-10 flex flex-col items-center gap-2 group cursor-pointer" onClick={() => {
-                if (isCompleted) {
-                  if (s.s === 'shipping') setStep('shipping');
-                  if (s.s === 'methods') setStep('methods');
-                }
-              }}>
-                <motion.div 
-                   animate={{ 
-                     backgroundColor: (isCompleted || isActive) ? "#FFD600" : "#FFFFFF",
-                     borderColor: (isCompleted || isActive) ? "#FFD600" : "#E5E7EB",
-                     scale: isActive ? 1.1 : 1
-                   }}
-                   className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-black text-sm transition-all shadow-sm ${isActive ? 'shadow-brand-yellow/30' : ''}`}
-                >
-                  {isCompleted ? <Check className="w-5 h-5 text-brand-dark" /> : <span className={isActive ? 'text-brand-dark' : 'text-gray-400'}>{s.id}</span>}
-                </motion.div>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-brand-dark' : isCompleted ? 'text-brand-blue' : 'text-gray-400'}`}>
-                  {s.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-8">
-          {step === 'shipping' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
-              <div>
-                <h3 className="font-black text-sm uppercase tracking-widest text-brand-dark mb-4 border-l-4 border-brand-yellow pl-4">Indirizzo di Spedizione</h3>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Conferma dove vuoi ricevere la merce</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Email di Contatto</label>
-                  <input 
-                    type="email" 
-                    value={shippingForm.email}
-                    onChange={e => setShippingForm({...shippingForm, email: e.target.value})}
-                    placeholder="mario.rossi@esempio.it"
-                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all"
-                  />
-                  <p className="text-[9px] text-gray-400 font-bold uppercase mt-1">L'email dell'account è preimpostata, puoi modificarla per la spedizione</p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Nome Completo</label>
-                  <input 
-                    type="text" 
-                    value={shippingForm.name}
-                    onChange={e => setShippingForm({...shippingForm, name: e.target.value})}
-                    placeholder="Mario Rossi"
-                    className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Indirizzo e Numero Civico</label>
-                  <input 
-                    type="text" 
-                    value={shippingForm.street}
-                    onChange={e => setShippingForm({...shippingForm, street: e.target.value})}
-                    placeholder="Via delle Camelie, 12"
-                    className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Città</label>
-                  {!shippingForm.isCustomCity ? (
-                    <select 
-                      value={shippingForm.city}
-                      onChange={e => {
-                        if (e.target.value === "CUSTOM") {
-                          setShippingForm({...shippingForm, isCustomCity: true, city: ""});
-                        } else {
-                          setShippingForm({...shippingForm, city: e.target.value});
-                        }
-                      }}
-                      className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all cursor-pointer"
-                    >
-                      <option value="">Seleziona...</option>
-                      {PREDEFINED_CITIES.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                      <option value="CUSTOM">-- Altra città (inserimento manuale) --</option>
-                    </select>
-                  ) : (
-                    <div className="relative">
-                      <input 
-                        type="text" 
-                        value={shippingForm.city}
-                        onChange={e => setShippingForm({...shippingForm, city: e.target.value})}
-                        placeholder="Es. Pomezia"
-                        className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all"
-                      />
-                      <button 
-                        onClick={() => setShippingForm({...shippingForm, isCustomCity: false, city: ""})}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase text-brand-blue"
-                      >
-                        Lista
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Provincia</label>
-                  <select 
-                    value={shippingForm.province}
-                    onChange={e => setShippingForm({...shippingForm, province: e.target.value})}
-                    className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all cursor-pointer"
-                  >
-                    <option value="">Seleziona...</option>
-                    {ITALIAN_PROVINCES.map(p => (
-                      <option key={p.code} value={p.code}>{p.code} - {p.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">CAP</label>
-                  <input 
-                    type="text" 
-                    value={shippingForm.zip}
-                    onChange={e => setShippingForm({...shippingForm, zip: e.target.value})}
-                    placeholder="00100"
-                    className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Cellulare / WhatsApp</label>
-                  <input 
-                    type="tel" 
-                    value={shippingForm.phone}
-                    onChange={e => setShippingForm({...shippingForm, phone: e.target.value})}
-                    placeholder="+39 333 1234567"
-                    className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Note per il Corriere (Opzionale)</label>
-                  <textarea 
-                    value={shippingForm.notes}
-                    onChange={e => setShippingForm({...shippingForm, notes: e.target.value})}
-                    placeholder="Es: Suonare al campanello Giallo, lasciare al portiere..."
-                    rows={2}
-                    className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all resize-none"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 'methods' && (
-            <div className="space-y-6">
-              <h3 className="font-black text-sm uppercase tracking-widest text-brand-dark mb-4 border-l-4 border-brand-yellow pl-4">Scegli il metodo di pagamento</h3>
-              
-              <div className="grid gap-4">
-                {settings.stripeEnabled && (
-                  <button 
-                    onClick={() => setSelectedMethod('stripe')}
-                    className={`p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${selectedMethod === 'stripe' ? "border-brand-yellow bg-brand-yellow/5" : "border-gray-100 hover:border-gray-300"}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-                        <CreditCard className="w-6 h-6" />
-                      </div>
-                      <div className="text-left">
-                        <span className="block font-black text-brand-dark uppercase tracking-tight">Carta di Credito / GPay</span>
-                        <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">Processato da Stripe</span>
-                      </div>
-                    </div>
-                    {selectedMethod === 'stripe' && <Check className="w-6 h-6 text-brand-yellow" />}
-                  </button>
-                )}
-
-                {settings.paypalEnabled && (
-                  <button 
-                    onClick={() => setSelectedMethod('paypal')}
-                    className={`p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${selectedMethod === 'paypal' ? "border-brand-blue bg-brand-blue/5" : "border-gray-100 hover:border-gray-300"}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                        <ExternalLink className="w-6 h-6" />
-                      </div>
-                      <div className="text-left">
-                        <span className="block font-black text-brand-dark uppercase tracking-tight">PayPal</span>
-                        <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">Paga in sicurezza con il tuo conto</span>
-                      </div>
-                    </div>
-                    {selectedMethod === 'paypal' && <Check className="w-6 h-6 text-brand-blue" />}
-                  </button>
-                )}
-
-                {settings.bankEnabled && (
-                  <button 
-                    onClick={() => setSelectedMethod('bank')}
-                    className={`p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${selectedMethod === 'bank' ? "border-brand-yellow bg-brand-yellow/5" : "border-gray-100 hover:border-gray-300"}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-600">
-                        <Globe className="w-6 h-6" />
-                      </div>
-                      <div className="text-left">
-                        <span className="block font-black text-brand-dark uppercase tracking-tight">Bonifico Bancario</span>
-                        <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">L'ordine verrà elaborato alla ricezione</span>
-                      </div>
-                    </div>
-                    {selectedMethod === 'bank' && <Check className="w-6 h-6 text-brand-yellow" />}
-                  </button>
-                )}
-
-                {settings.codEnabled && (
-                  <button 
-                    onClick={() => setSelectedMethod('cod')}
-                    className={`p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${selectedMethod === 'cod' ? "border-orange-500 bg-orange-50/5" : "border-gray-100 hover:border-gray-300"}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600">
-                        <Truck className="w-6 h-6" />
-                      </div>
-                      <div className="text-left">
-                        <span className="block font-black text-brand-dark uppercase tracking-tight">Contrassegno (COD)</span>
-                        <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">Paga in contanti alla consegna</span>
-                      </div>
-                    </div>
-                    {selectedMethod === 'cod' && <Check className="w-6 h-6 text-orange-500" />}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {step === 'details' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-8 duration-500 pb-6">
-
-              {/* PDF Proforma Document */}
-              <div id="bp-proforma-doc" className="bg-white border border-gray-100 rounded-2xl overflow-hidden p-6 space-y-5">
-                
-                {/* ── HEADER DOCUMENTO ── */}
-                <div className="flex justify-between items-start pb-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className={companySettings.imageLogo ? "h-10" : "w-10 h-10 bg-brand-yellow rounded-lg flex items-center justify-center flex-shrink-0"}>
-                      {companySettings.imageLogo
-                        ? <img src={companySettings.imageLogo} alt="Logo" className="h-full object-contain" referrerPolicy="no-referrer" />
-                        : <span className="text-brand-dark font-black text-sm italic">{companySettings.logo}</span>}
-                    </div>
-                    <div>
-                      <p className="font-black text-brand-dark text-sm uppercase tracking-tight leading-none">{companySettings.name}</p>
-                      <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">{companySettings.legalName}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-base font-black text-brand-dark uppercase tracking-tight leading-none">Proforma</p>
-                    <p className="text-[9px] font-black text-brand-blue uppercase tracking-widest mt-1">ORDINE #{orderId}</p>
-                    <p className="text-[8px] text-gray-400 font-bold uppercase mt-0.5">{new Date().toLocaleDateString('it-IT')}</p>
-                  </div>
-                </div>
-
-                {/* ── ANAGRAFICA + SPEDIZIONE ── */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                      <User size={9} className="text-brand-yellow" /> Cliente
-                    </p>
-                    <p className="font-black text-brand-dark text-xs leading-tight">{shippingForm.name}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{shippingForm.email}</p>
-                    <p className="text-[10px] text-brand-blue font-bold">{shippingForm.phone}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                      <MapPin size={9} className="text-brand-yellow" /> Destinazione
-                    </p>
-                    <p className="font-bold text-brand-dark text-xs leading-snug">{shippingForm.street}</p>
-                    <p className="text-[10px] text-gray-500">{shippingForm.zip} {shippingForm.city} ({shippingForm.province})</p>
-                    {shippingForm.notes && (
-                      <div className="mt-2 p-1.5 bg-yellow-50 rounded border border-yellow-100">
-                        <p className="text-[7px] font-black text-yellow-600 uppercase">Note Corriere</p>
-                        <p className="text-[9px] font-bold text-yellow-800 leading-tight italic">{shippingForm.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── METODO PAGAMENTO ── */}
-                <div className="flex items-center justify-between bg-brand-dark text-white px-4 py-3 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {selectedMethod === 'stripe' && <CreditCard size={14} className="text-brand-yellow" />}
-                      {selectedMethod === 'paypal' && <ExternalLink size={14} className="text-brand-yellow" />}
-                      {selectedMethod === 'bank'   && <Globe size={14} className="text-brand-yellow" />}
-                      {selectedMethod === 'cod'    && <Truck size={14} className="text-brand-yellow" />}
-                    </div>
-                    <div>
-                      <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest">Pagamento</p>
-                      <p className="text-xs font-black text-brand-yellow uppercase tracking-tight">
-                        {selectedMethod === 'stripe' ? 'Carta / GPay' : selectedMethod === 'paypal' ? 'PayPal' : selectedMethod === 'bank' ? 'Bonifico Bancario' : 'Contrassegno'}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[7px] font-black text-yellow-400 border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 rounded-full uppercase">In attesa</span>
-                </div>
-
-                {/* ── PRODOTTI ── */}
-                <div>
-                  <div className="grid grid-cols-12 text-[7px] font-black text-gray-400 uppercase tracking-widest px-2 pb-1 border-b border-gray-100">
-                    <div className="col-span-1"></div>
-                    <div className="col-span-6 pl-2">Articolo</div>
-                    <div className="col-span-2 text-center">Prezzo</div>
-                    <div className="col-span-1 text-center">Qt</div>
-                    <div className="col-span-2 text-right">Tot.</div>
-                  </div>
-                  {items.map(item => (
-                    <div key={item.id} className="grid grid-cols-12 items-center py-2 px-2 border-b border-gray-50 last:border-0">
-                      <div className="col-span-1">
-                        <div className="w-7 h-7 rounded bg-gray-50 border border-gray-100 overflow-hidden">
-                          {item.image && <img src={item.image} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />}
-                        </div>
-                      </div>
-                      <div className="col-span-6 pl-2">
-                        <p className="text-xs font-black text-brand-dark leading-tight">{item.name}</p>
-                        <p className="text-[7px] text-gray-400 font-bold uppercase">SKU-{item.id.padStart(4,'0')}</p>
-                      </div>
-                      <div className="col-span-2 text-center">
-                        <span className="text-xs font-bold text-brand-dark">€{item.price.toFixed(2)}</span>
-                      </div>
-                      <div className="col-span-1 text-center">
-                        <span className="w-5 h-5 rounded bg-gray-100 inline-flex items-center justify-center text-[10px] font-black text-brand-dark">{item.quantity}</span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs font-black text-brand-dark">€{(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* ── TOTALI ── */}
-                <div className="flex flex-col items-end gap-1.5 pt-3 border-t border-gray-100">
-                  <div className="flex justify-between w-56 text-[10px] font-bold text-gray-400 uppercase">
-                    <span>Subtotale</span><span className="text-brand-dark">€{total.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between w-56 text-[10px] font-bold text-green-600 uppercase">
-                    <span>Spedizione</span><span className="font-black">€0,00</span>
-                  </div>
-                  <div className="flex justify-between items-center w-56 bg-brand-yellow px-4 py-3 rounded-2xl mt-1">
-                    <span className="text-[10px] font-black text-brand-dark uppercase tracking-widest">Totale</span>
-                    <span className="text-lg font-black text-brand-dark">€{total.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* ── DATI PAGAMENTO (se Bonifico / COD) ── */}
-                {(selectedMethod === 'bank' || selectedMethod === 'cod') && (
-                  <div className={`p-4 rounded-xl border text-xs ${
-                    selectedMethod === 'bank' ? 'border-brand-yellow/30 bg-yellow-50/50' : 'border-orange-200 bg-orange-50'
-                  }`}>
-                    <p className="text-[8px] font-black uppercase tracking-widest mb-2 flex items-center gap-1">
-                      <Shield size={10} /> Dati per il pagamento
-                    </p>
-                    {selectedMethod === 'bank' ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-[7px] text-gray-400 uppercase font-black mb-0.5">Beneficiario</p>
-                          <p className="font-black text-brand-dark text-xs uppercase">{settings.bankOwner || 'BESPOINT S.R.L.'}</p>
-                        </div>
-                        <div>
-                          <p className="text-[7px] text-gray-400 uppercase font-black mb-0.5">IBAN</p>
-                          <p className="font-bold text-brand-dark text-[10px] tracking-tight select-all">{settings.bankIban || '—'}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-[10px] font-bold text-gray-600 uppercase">{settings.codNote || 'Pagamento in contanti alla consegna.'}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="no-print flex flex-col items-center gap-3 pt-2">
-                <button
-                  onClick={handlePrintProforma}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-brand-dark text-brand-yellow rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all"
-                >
-                  <FileText size={14} />
-                  Stampa / Salva PDF
-                </button>
-                <p className="text-[9px] text-gray-400 font-bold italic text-center max-w-xs">
-                  Proforma generata dal sistema. Fattura elettronica emessa a spedizione avvenuta.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-8 bg-gray-50 border-t border-gray-100 mt-auto">
-          {!currentUser ? (
-              <div className="text-center space-y-4">
-                <p className="text-sm font-bold text-brand-dark uppercase tracking-tighter">🔒 Effettua il login o registrati per completare l'acquisto</p>
-                <button 
-                  onClick={onAuthOpen}
-                  className="w-full h-16 rounded-2xl bg-brand-yellow text-brand-dark font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-brand-yellow/20 hover:bg-brand-orange"
-                >
-                  Registrati ora
-                </button>
-              </div>
-          ) : step === 'shipping' ? (
-            <button 
-              disabled={!shippingForm.street || !shippingForm.city || !shippingForm.province || !shippingForm.phone}
-              onClick={() => setStep('methods')}
-              className="w-full h-16 rounded-2xl bg-brand-dark text-brand-yellow font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-brand-dark/20 hover:bg-black disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-              Prosegui al Pagamento
-            </button>
-          ) : (
-            <div className="space-y-4">
-                <button 
-                  onClick={() => setStep('shipping')}
-                  className="w-full text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-dark transition-colors"
-                >
-                  Modifica Indirizzo di Spedizione
-                </button>
-                <button 
-                  disabled={!selectedMethod || isProcessing}
-                  onClick={() => {
-                    if (step === 'methods') {
-                      setStep('details');
-                    } else {
-                      handleConfirmOrder();
-                    }
-                  }}
-                  className={`w-full h-16 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3 ${selectedMethod ? "bg-brand-dark text-brand-yellow hover:bg-black active:scale-[0.98] shadow-brand-dark/20" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
-                >
-                  {isProcessing && <RefreshCw className="w-5 h-5 animate-spin" />}
-                  {step === 'methods' ? "Vedi Riepilogo" : "Conferma Ordine"}
-                </button>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </>
-  );
-};
-
-const CartDrawer = ({ items, onClose, onUpdateQuantity, onRemove, onCheckout }: { 
+const CartDrawer = ({ items, onClose, onUpdateQuantity, onRemove }: { 
   items: CartItem[]; 
   onClose: () => void;
   onUpdateQuantity: (id: string, delta: number) => void;
   onRemove: (id: string) => void;
-  onCheckout: () => void;
   key?: string;
 }) => {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -1526,10 +715,7 @@ const CartDrawer = ({ items, onClose, onUpdateQuantity, onRemove, onCheckout }: 
               <span className="text-gray-500 font-medium">Totale</span>
               <span className="text-2xl font-bold">€{total.toFixed(2)}</span>
             </div>
-            <button 
-              onClick={onCheckout}
-              className="w-full bg-brand-yellow hover:bg-brand-orange text-brand-dark h-14 rounded-2xl font-bold text-lg active:scale-95 transition-transform"
-            >
+            <button className="w-full bg-brand-yellow hover:bg-brand-orange text-brand-dark h-14 rounded-2xl font-bold text-lg active:scale-95 transition-transform">
               Procedi al Pagamento
             </button>
           </motion.div>
@@ -1759,39 +945,7 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [paymentSettings, setPaymentSettings] = useState(() => {
-    const saved = localStorage.getItem('paymentSettings');
-    return saved ? JSON.parse(saved) : {
-      stripeEnabled: true,
-      stripeKey: "",
-      paypalEnabled: true,
-      paypalEmail: "",
-      bankEnabled: true,
-      bankOwner: "BESPOINT S.R.L.",
-      bankIban: "IT00 X 00000 00000 000000000000",
-      bankNote: "L'ordine verrà evaso dopo l'accredito.",
-      codEnabled: true,
-      codNote: "Pagamento in contanti al corriere alla consegna."
-    };
-  });
-  
-  const [orders, setOrders] = useState(() => {
-    const saved = localStorage.getItem('bespoint_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('bespoint_orders', JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem('paymentSettings', JSON.stringify(paymentSettings));
-  }, [paymentSettings]);
-
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminSearchQuery, setAdminSearchQuery] = useState("");
-  const [adminCategoryFilter, setAdminCategoryFilter] = useState("Tutti");
+  const [isAdminOpen, setIsAdminOpen] = useState(true);
   
   // Auth State
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -1846,10 +1000,8 @@ export default function App() {
     localStorage.setItem('bespoint_returns', JSON.stringify(returnRequests));
   }, [returnRequests]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [adminActiveTab, setAdminActiveTab] = useState<'dashboard' | 'company' | 'slides' | 'categories' | 'seo' | 'marketing' | 'analytics' | 'products' | 'marketplaces' | 'orders' | 'couriers' | 'payments'>('dashboard');
+  const [adminActiveTab, setAdminActiveTab] = useState<'dashboard' | 'company' | 'slides' | 'categories' | 'seo' | 'marketing' | 'analytics' | 'products' | 'marketplaces' | 'orders' | 'couriers'>('dashboard');
   const [adminProductView, setAdminProductView] = useState<'list' | 'single' | 'mass'>('list');
-  const [editingAdminProduct, setEditingAdminProduct] = useState<Product | null>(null);
-  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [adminTopIdx, setAdminTopIdx] = useState(0);
   const [adminMidIdx, setAdminMidIdx] = useState(0);
@@ -1921,9 +1073,9 @@ export default function App() {
     const defaultBanners: Record<string, any> = {};
     const defaultHomeSlides: any[] = [];
 
+    // Use CATEGORIES and SUBCATEGORIES from data.ts as initial defaults if not saved
     const initialCategories = CATEGORIES;
     const initialSubcategories = SUBCATEGORIES;
-    const defaultSeo: Record<string, any> = {};
 
     initialCategories.filter(c => c !== "Tutti").forEach((cat, index) => {
       defaultBanners[cat] = { 
@@ -1931,11 +1083,6 @@ export default function App() {
         alt: cat, 
         title: cat,
         link: "" 
-      };
-
-      defaultSeo[cat] = {
-        metaTitle: `${cat} di Alta Qualità - BesPoint`,
-        metaDescription: `Scopri la nostra selezione esclusiva di ${cat}. Qualità garantita, spedizione veloce e i migliori prezzi del mercato su BesPoint.`
       };
 
       // Top Slide - Only for the first category
@@ -1982,9 +1129,7 @@ export default function App() {
       if (!parsed.categories) parsed.categories = initialCategories;
       if (!parsed.subcategories) parsed.subcategories = initialSubcategories;
 
-      // Ensure all current categories exist in saved settings banners and SEO
-      if (!parsed.categorySeo) parsed.categorySeo = defaultSeo;
-
+      // Ensure all current categories exist in saved settings banners
       parsed.categories.filter((c: string) => c !== "Tutti").forEach((cat: string) => {
         if (!parsed.categoryBanners[cat]) {
           parsed.categoryBanners[cat] = { 
@@ -1992,12 +1137,6 @@ export default function App() {
             alt: cat, 
             title: cat,
             link: "" 
-          };
-        }
-        if (!parsed.categorySeo[cat]) {
-          parsed.categorySeo[cat] = {
-            metaTitle: `${cat} di Alta Qualità - BesPoint`,
-            metaDescription: `Scopri la nostra selezione esclusiva di ${cat}. Qualità garantita, spedizione veloce e i migliori prezzi del mercato su BesPoint.`
           };
         }
       });
@@ -2025,15 +1164,16 @@ export default function App() {
         parsed.homeSlides = [botSlides[0], ...parsed.homeSlides.filter((s: any) => s.position !== 'home_bottom')];
       }
 
-      if (!parsed.maxFeatured) parsed.maxFeatured = 8;
-      if (!parsed.maxNewArrivals) parsed.maxNewArrivals = 15;
-      if (parsed.isFeaturedEnabled === undefined) parsed.isFeaturedEnabled = false;
-      if (parsed.isNewArrivalsEnabled === undefined) parsed.isNewArrivalsEnabled = true;
-      if (parsed.isSpecialCategoryEnabled === undefined) parsed.isSpecialCategoryEnabled = false;
-      if (!parsed.specialCategoryTitle) parsed.specialCategoryTitle = "Nuova Sezione";
-      if (parsed.specialCategoryValue === undefined) parsed.specialCategoryValue = "";
-      if (parsed.specialSubcategoryValue === undefined) parsed.specialSubcategoryValue = "Tutti";
-      if (!parsed.specialCategoryMax) parsed.specialCategoryMax = 4;
+      if (!parsed.linkRapidi) {
+        parsed.linkRapidi = [
+          { id: '1', title: "Nuovi Arrivi", subtitle: "Scopri la collezione", color: "bg-brand-blue", seed: "gadgets", category: "Tutti", subcategory: "Tutti" },
+          { id: '2', title: "Best Seller", subtitle: "I più amati", color: "bg-brand-yellow", seed: "tech-best", category: "Tutti", subcategory: "Tutti" },
+          { id: '3', title: "Sconti Flash", subtitle: "Solo per oggi", color: "bg-red-500", seed: "flash", category: "Tutti", subcategory: "Tutti" },
+          { id: '4', title: "Illuminazione", subtitle: "Luce perfetta", color: "bg-green-600", seed: "light", category: "Illuminazione", subcategory: "Tutti" },
+          { id: '5', title: "Audio Pro", subtitle: "Suono puro", color: "bg-purple-600", seed: "audio", category: "Elettronica", subcategory: "Audio" },
+          { id: '6', title: "Smart Home", subtitle: "Casa connessa", color: "bg-orange-500", seed: "smart", category: "Sicurezza", subcategory: "Tutti" },
+        ];
+      }
 
       return parsed;
     }
@@ -2041,18 +1181,8 @@ export default function App() {
     return {
       homeSlides: defaultHomeSlides,
       categoryBanners: defaultBanners,
-      categorySeo: defaultSeo,
       categories: initialCategories,
       subcategories: initialSubcategories,
-      maxFeatured: 8,
-      maxNewArrivals: 15,
-      isFeaturedEnabled: false,
-      isNewArrivalsEnabled: true,
-      isSpecialCategoryEnabled: false,
-      specialCategoryTitle: "Speciale Natale",
-      specialCategoryValue: "",
-      specialSubcategoryValue: "Tutti",
-      specialCategoryMax: 4,
       linkRapidi: [
         { id: '1', title: "Nuovi Arrivi", subtitle: "Scopri la collezione", color: "bg-brand-blue", seed: "gadgets", category: "Tutti", subcategory: "Tutti" },
         { id: '2', title: "Best Seller", subtitle: "I più amati", color: "bg-brand-yellow", seed: "tech-best", category: "Tutti", subcategory: "Tutti" },
@@ -2060,8 +1190,7 @@ export default function App() {
         { id: '4', title: "Illuminazione", subtitle: "Luce perfetta", color: "bg-green-600", seed: "light", category: "Illuminazione", subcategory: "Tutti" },
         { id: '5', title: "Audio Pro", subtitle: "Suono puro", color: "bg-purple-600", seed: "audio", category: "Elettronica", subcategory: "Audio" },
         { id: '6', title: "Smart Home", subtitle: "Casa connessa", color: "bg-orange-500", seed: "smart", category: "Sicurezza", subcategory: "Tutti" },
-      ],
-      enabledMarketplaces: ["Amazon", "eBay"]
+      ]
     };
   });
 
@@ -2207,34 +1336,8 @@ export default function App() {
   }, [topSlides.length]);
 
   useEffect(() => {
-    if (isAdminOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isAdminOpen]);
-
-  useEffect(() => {
     setSelectedSubcategory("Tutti");
   }, [selectedCategory]);
-
-  const featuredProducts = useMemo(() => {
-    return PRODUCTS.filter(p => p.isFeatured).slice(0, pageSettings.maxFeatured || 8);
-  }, [cartTrigger, pageSettings.maxFeatured]);
-
-  const specialCategoryProducts = useMemo(() => {
-    if (!pageSettings.isSpecialCategoryEnabled || !pageSettings.specialCategoryValue) return [];
-    const filtered = PRODUCTS.filter(p => {
-      const matchesCategory = p.category === pageSettings.specialCategoryValue;
-      const matchesSubcategory = pageSettings.specialSubcategoryValue === "Tutti" || p.subcategory === pageSettings.specialSubcategoryValue;
-      return matchesCategory && matchesSubcategory;
-    });
-    // Simple shuffle for rotation
-    return [...filtered].sort(() => Math.random() - 0.5).slice(0, pageSettings.specialCategoryMax || 4);
-  }, [pageSettings.isSpecialCategoryEnabled, pageSettings.specialCategoryValue, pageSettings.specialSubcategoryValue, pageSettings.specialCategoryMax, cartTrigger]);
 
   const filteredProducts = useMemo(() => {
     const filtered = PRODUCTS.filter(p => {
@@ -2251,7 +1354,7 @@ export default function App() {
       if (sortBy === "newest") return parseInt(b.id) - parseInt(a.id);
       return 0;
     });
-  }, [selectedCategory, selectedSubcategory, searchQuery, sortBy, cartTrigger]);
+  }, [selectedCategory, selectedSubcategory, searchQuery, sortBy]);
 
   // --- Simulated Backend Auth Methods ---
   const getUsers = () => JSON.parse(localStorage.getItem('bespoint_users') || '[]');
@@ -2573,7 +1676,7 @@ export default function App() {
           style={{ opacity: heroOpacity, y: heroY }}
           className="relative w-full overflow-hidden mb-8 origin-top"
         >
-          <div className="h-[460px] sm:h-[550px] w-full relative">
+          <div className="h-64 sm:h-80 w-full relative">
             <div className="absolute inset-0 bg-gradient-to-b from-brand-blue/40 to-transparent z-10" />
             <AnimatePresence mode="wait">
               <motion.div
@@ -2668,7 +1771,7 @@ export default function App() {
               viewport={{ once: true }}
               className="flex items-center justify-between mb-4"
             >
-              <h2 className="text-3xl font-black text-brand-dark uppercase tracking-tighter">LE SCELTE MIGLIORI PER TE</h2>
+              <h2 className="text-lg font-bold text-brand-dark">Le scelte migliori per te</h2>
               <button className="text-xs font-bold text-blue-600">Vedi tutte</button>
             </motion.div>
             <div className="flex overflow-x-auto lg:grid lg:grid-cols-12 lg:grid-rows-2 lg:h-[450px] no-scrollbar gap-4 pb-4">
@@ -2723,73 +1826,21 @@ export default function App() {
             </div>
           </section>
 
-          {/* Special Category Showcase (e.g. Natale) */}
-          {searchQuery === "" && pageSettings.isSpecialCategoryEnabled && specialCategoryProducts.length > 0 && (
-            <section className="px-4 mb-16 mt-0">
-              <motion.div 
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="mb-3"
-              >
-                <h2 className="text-3xl font-black text-brand-dark uppercase tracking-tighter">{pageSettings.specialCategoryTitle}</h2>
-              </motion.div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                {specialCategoryProducts.map((product, index) => (
-                  <ProductCard 
-                    key={`special-${product.id}`}
-                    product={product} 
-                    onClick={() => setSelectedProduct(product)} 
-                    onAddToCart={addToCart}
-                    index={index}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
           <SlideSection slides={middleSlides} />
-
-          {/* Home Showcase (Vetrina) */}
-          {searchQuery === "" && pageSettings.isFeaturedEnabled && featuredProducts.length > 0 && (
-            <section className="px-4 mb-16 mt-0">
-              <motion.div 
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="mb-3"
-              >
-                <h2 className="text-3xl font-black text-brand-dark uppercase tracking-tighter">VETRINA</h2>
-              </motion.div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                {featuredProducts.map((product, index) => (
-                  <ProductCard 
-                    key={`featured-${product.id}`}
-                    product={product} 
-                    onClick={() => setSelectedProduct(product)} 
-                    onAddToCart={addToCart}
-                    index={index}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
         </>
       )}
 
-      {/* Product Grid Section (Ultimi Arrivi) */}
-      {pageSettings.isNewArrivalsEnabled && (
-        <section className="px-4 relative z-10 mb-16">
+      {/* Product Grid Section */}
+      <section className="px-4 relative z-10 mb-16">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"
         >
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-3xl font-black text-brand-dark uppercase tracking-tighter">
-              {selectedCategory === "Tutti" ? "ULTIMI ARRIVI" : `${selectedCategory}`}
-            </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-brand-dark">Prodotti in vetrina</h2>
+            <span className="text-xs text-gray-400 font-medium">({filteredProducts.length} risultati)</span>
           </div>
           
           <div className="flex items-center gap-3">
@@ -2818,19 +1869,19 @@ export default function App() {
               <p className="text-gray-400 font-medium">Nessun prodotto trovato</p>
             </div>
           ) : (
-            (selectedCategory === "Tutti" ? filteredProducts.slice(0, pageSettings.maxNewArrivals || 15) : filteredProducts).map((product, index) => (
-              <ProductCard 
-                key={`new-${product.id}`}
-                product={product} 
-                onClick={() => setSelectedProduct(product)} 
-                onAddToCart={addToCart}
-                index={index}
-              />
+            filteredProducts.map((product, index) => (
+              <div key={product.id}>
+                <ProductCard 
+                  product={product} 
+                  onClick={() => setSelectedProduct(product)} 
+                  onAddToCart={addToCart}
+                  index={index}
+                />
+              </div>
             ))
           )}
         </div>
       </section>
-      )}
 
       {selectedCategory === "Tutti" && <SlideSection slides={bottomSlides} />}
 
@@ -2862,7 +1913,7 @@ export default function App() {
                 transition={{ delay: 0.2 }}
                 className="text-3xl font-black text-white uppercase tracking-tighter mb-2 drop-shadow-lg"
               >
-                BESPOINT EXPERIENCE
+                Bespoint Experience
               </motion.h2>
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
@@ -2888,7 +1939,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="bg-brand-dark text-white pt-16 pb-32 px-6 no-print">
+      <footer className="bg-brand-dark text-white pt-16 pb-32 px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Company Info */}
           <div className="space-y-6">
@@ -2987,35 +2038,8 @@ export default function App() {
             onClose={() => setIsCartOpen(false)} 
             onUpdateQuantity={updateQuantity}
             onRemove={removeFromCart}
-            onCheckout={() => {
-              setIsCartOpen(false);
-              setIsCheckoutOpen(true);
-            }}
           />
         )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isCheckoutOpen && (
-          <CheckoutSheet 
-            onClose={() => setIsCheckoutOpen(false)} 
-            items={cart}
-            settings={paymentSettings}
-            currentUser={currentUser}
-            onAuthOpen={() => {
-              setIsCheckoutOpen(false);
-              setAuthStep('register');
-              setIsAuthOpen(true);
-            }}
-            appOrders={orders}
-            setAppOrders={setOrders}
-            setCart={setCart}
-            companySettings={companySettings}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
         <SideMenu 
           key="side-menu"
           isOpen={isSideMenuOpen} 
@@ -3083,31 +2107,28 @@ export default function App() {
                 {/* Sidebar */}
                 <motion.div 
                   initial={{ x: -280 }}
-                  animate={{ x: 0, width: isSidebarCollapsed ? 83 : 256 }}
-                  className={`h-full bg-gray-50 flex flex-col transition-all duration-500 relative z-20 ${isMobileAdminMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+                  animate={{ x: 0 }}
+                  className={`${isSidebarCollapsed ? 'w-24' : 'w-72 md:w-80'} h-full bg-brand-dark flex flex-col transition-all duration-500 relative z-20 shadow-2xl ${isMobileAdminMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
                 >
 
             {/* Sidebar Menu */}
             <motion.div 
               initial={false}
               animate={{ 
-                width: window.innerWidth < 768 ? (isMobileAdminMenuOpen ? '100%' : 0) : (isSidebarCollapsed ? 83 : 256),
+                width: window.innerWidth < 768 ? (isMobileAdminMenuOpen ? '100%' : 0) : (isSidebarCollapsed ? 80 : 256),
                 x: window.innerWidth < 768 && !isMobileAdminMenuOpen ? -300 : 0,
                 opacity: window.innerWidth < 768 && !isMobileAdminMenuOpen ? 0 : 1
               }}
-              className={`bg-gray-50 border-r border-gray-100 flex flex-col relative transition-all duration-300 z-40 h-full overflow-hidden ${window.innerWidth < 768 ? (isMobileAdminMenuOpen ? 'fixed inset-0 pt-20' : 'hidden') : ''}`}
+              className={`bg-gray-50 border-r border-gray-100 flex flex-col p-6 relative transition-all duration-300 z-40 ${window.innerWidth < 768 ? (isMobileAdminMenuOpen ? 'fixed inset-0 pt-20' : 'hidden') : ''}`}
             >
                 <button 
                   onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                  className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 w-[43px] h-[43px] bg-white border-2 border-brand-yellow rounded-full items-center justify-center z-[70] hover:scale-110 transition-all group active:scale-95"
-                  title={isSidebarCollapsed ? "Espandi Menu" : "Contrai Menu"}
+                  className="hidden md:flex absolute -right-3 top-20 w-6 h-6 bg-white border border-gray-100 rounded-full items-center justify-center shadow-sm z-10 hover:bg-brand-yellow transition-colors"
                 >
-                  <div className="flex items-center justify-center mr-0.5">
-                    {isSidebarCollapsed ? <Plus className="w-5 h-5 text-brand-dark rotate-45" /> : <ChevronLeft className="w-5 h-5 text-brand-dark" />}
-                  </div>
+                  {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </button>
 
-                <div className={`hidden md:flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3 px-6'} mt-6 mb-10 overflow-hidden`}>
+                <div className="hidden md:flex items-center gap-3 mb-10 overflow-hidden">
                   <div className="w-10 h-10 bg-brand-blue rounded-xl flex-shrink-0 flex items-center justify-center">
                     <Shield className="w-6 h-6 text-brand-yellow" />
                   </div>
@@ -3115,47 +2136,140 @@ export default function App() {
                     <h3 className="font-black text-brand-dark uppercase tracking-tighter whitespace-nowrap">Admin Panel</h3>
                   )}
                 </div>
+                
+                <nav className="space-y-2 flex-1">
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('company');
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'company' ? 'bg-brand-yellow text-brand-dark shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Grid className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Azienda</span>}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('slides');
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'slides' ? 'bg-brand-yellow text-brand-dark shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Play className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Slide</span>}
+                  </button>
+                  <button 
+                    onClick={() => setAdminActiveTab('seo')}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'seo' ? 'bg-brand-yellow text-brand-dark shadow-lg shadow-brand-yellow/20' : 'text-gray-400 hover:bg-gray-50 hover:text-brand-dark'}`}
+                  >
+                    <Globe className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>SEO & Google</span>}
+                  </button>
 
-                <nav className="space-y-1 flex-1 overflow-y-auto custom-scrollbar">
-                  {[
-                    { tab: 'dashboard', label: 'Panoramica', icon: Home, color: 'bg-brand-dark text-white' },
-                    { tab: 'company', label: 'Azienda', icon: Grid, color: 'bg-brand-yellow text-brand-dark font-black' },
-                    { tab: 'slides', label: 'Slide', icon: Play, color: 'bg-brand-yellow text-brand-dark' },
-                    { tab: 'link_rapidi', label: 'Link Rapidi', icon: Box, color: 'bg-brand-yellow text-brand-dark' },
-                    { tab: 'categories', label: 'Categorie', icon: Compass, color: 'bg-brand-yellow text-brand-dark' },
-                    { tab: 'products', label: 'Prodotti', icon: Package, color: 'bg-brand-yellow text-brand-dark' },
-                    { tab: 'couriers', label: 'Corrieri', icon: Truck, color: 'bg-brand-yellow text-brand-dark' },
-                    { tab: 'orders', label: 'Ordini', icon: ShoppingBag, color: 'bg-brand-blue text-white font-black' },
-                    { tab: 'users', label: 'Archivio Utenti', icon: Users, color: 'bg-blue-600 text-white' },
-                    { tab: 'returns', label: 'Gestione Resi', icon: RefreshCw, color: 'bg-red-500 text-white' },
-                    { tab: 'seo', label: 'SEO & Google', icon: Globe, color: 'bg-indigo-700 text-white' },
-                    { tab: 'analytics', label: 'Analytics', icon: BarChart2, color: 'bg-indigo-600 text-white' },
-                    { tab: 'marketplaces', label: 'Marketplace', icon: Globe, color: 'bg-amber-600 text-white' },
-                    { tab: 'payments', label: 'Pagamenti', icon: CreditCard, color: 'bg-green-600 text-white font-black' },
-                    { tab: 'marketing', label: 'Marketing', icon: Target, color: 'bg-orange-500 text-white' }
-                  ].map((item) => (
-                    <div key={item.tab} className="px-3">
-                      <button 
-                        onClick={() => {
-                          setAdminActiveTab(item.tab as any);
-                          setIsMobileAdminMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3 px-4'} py-3.5 md:py-2.5 rounded-xl font-bold text-sm transition-all ${adminActiveTab === item.tab ? item.color : 'text-gray-400 hover:bg-gray-100/50'}`}
-                        title={isSidebarCollapsed ? item.label : ''}
-                      >
-                        <item.icon className="w-5 h-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>{item.label}</span>}
-                      </button>
-                    </div>
-                  ))}
+                  <button 
+                    onClick={() => setAdminActiveTab('analytics')}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'analytics' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-400 hover:bg-gray-50 hover:text-brand-dark'}`}
+                  >
+                    <BarChart2 className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Analytics</span>}
+                  </button>
+
+                  <button 
+                    onClick={() => setAdminActiveTab('marketing')}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'marketing' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-50 hover:text-brand-dark'}`}
+                  >
+                    <Target className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Marketing & Adv</span>}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('categories');
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'categories' ? 'bg-brand-yellow text-brand-dark shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Compass className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Categorie</span>}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('orders' as any);
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'orders' ? 'bg-brand-yellow text-brand-dark shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <ShoppingBag className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Ordini</span>}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('couriers');
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'couriers' ? 'bg-brand-yellow text-brand-dark shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Truck className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Corrieri</span>}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('products');
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'products' ? 'bg-brand-yellow text-brand-dark shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Package className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Prodotti</span>}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('marketplaces');
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'marketplaces' ? 'bg-brand-yellow text-brand-dark shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Globe className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Marketplaces</span>}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('link_rapidi' as any);
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === ('link_rapidi' as any) ? 'bg-brand-yellow text-brand-dark shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Box className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Link Rapidi</span>}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('returns' as any);
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'returns' ? 'bg-red-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <RefreshCw className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Gestione Resi</span>}
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      setAdminActiveTab('users' as any);
+                      setIsMobileAdminMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm transition-all ${adminActiveTab === 'users' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Users className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
+                    {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Archivio Utenti</span>}
+                  </button>
                 </nav>
 
                 <button 
                   onClick={() => setIsAdminOpen(false)}
-                  className={`mt-auto w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-center gap-2'} px-4 py-4 md:py-3 rounded-2xl font-bold text-sm text-red-500 hover:bg-red-50 transition-all`}
+                  className="mt-auto w-full flex items-center justify-center gap-2 px-4 py-4 md:py-3 rounded-2xl font-bold text-sm text-red-500 hover:bg-red-50 transition-all"
                 >
                   <X className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" />
-                  {!isSidebarCollapsed && <span>Esci</span>}
+                  {(window.innerWidth >= 768 ? !isSidebarCollapsed : true) && <span>Esci</span>}
                 </button>
             </motion.div>
           </motion.div>
@@ -3166,7 +2280,7 @@ export default function App() {
                   <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="flex justify-between items-end">
                       <div>
-                        <h2 className="text-3xl font-black text-brand-dark leading-none tracking-tighter uppercase">Bentornato</h2>
+                        <h2 className="text-[40px] font-black text-brand-dark leading-none tracking-tighter uppercase">Benvenuto, Boss 👋</h2>
                         <p className="text-sm font-bold text-gray-400 mt-2 uppercase tracking-[0.2em]">Ecco l'andamento del tuo impero BesPoint</p>
                       </div>
                       <div className="hidden md:flex gap-4">
@@ -3188,7 +2302,7 @@ export default function App() {
                         { label: 'Resi Gestiti', value: '12', change: '-5%', icon: Repeat, color: 'text-red-500', bg: 'bg-white' },
                         { label: 'Nuovi Clienti', value: '342', change: '+22%', icon: UserPlus, color: 'text-purple-500', bg: 'bg-white' }
                       ].map((stat, i) => (
-                        <div key={i} className={`${stat.bg} ${stat.bg === 'bg-brand-dark' ? 'text-white' : 'text-brand-dark border border-gray-100'} p-8 rounded-[3rem] hover:-translate-y-2 transition-all relative overflow-hidden group`}>
+                        <div key={i} className={`${stat.bg} ${stat.bg === 'bg-brand-dark' ? 'text-white' : 'text-brand-dark border border-gray-100'} p-8 rounded-[3rem] shadow-xl hover:-translate-y-2 transition-all relative overflow-hidden group`}>
                            <div className="flex justify-between items-start relative z-10">
                               <div className={`p-4 ${stat.bg === 'bg-brand-dark' ? 'bg-white/10' : 'bg-gray-50'} rounded-2xl group-hover:rotate-12 transition-transform`}>
                                 <stat.icon className={`w-7 h-7 ${stat.color}`} />
@@ -3208,7 +2322,7 @@ export default function App() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                        {/* Sales Trend Chart */}
-                       <div className="lg:col-span-2 bg-white p-10 rounded-[3.5rem] border border-gray-100 space-y-8">
+                       <div className="lg:col-span-2 bg-white p-10 rounded-[3.5rem] border border-gray-100 shadow-xl space-y-8">
                           <div className="flex justify-between items-center">
                              <h3 className="text-2xl font-black text-brand-dark uppercase tracking-tighter">Andamento Vendite</h3>
                              <div className="flex p-1 bg-gray-50 rounded-xl">
@@ -3227,9 +2341,9 @@ export default function App() {
                                     <motion.div 
                                       initial={{ height: 0 }}
                                       animate={{ height: `${h}%` }}
-                                      className="w-full bg-gradient-to-t from-brand-blue/5 to-brand-blue rounded-2xl group-hover:from-brand-yellow group-hover:to-brand-yellow/80 transition-all duration-500"
+                                      className="w-full bg-gradient-to-t from-brand-blue/5 to-brand-blue rounded-2xl group-hover:from-brand-yellow group-hover:to-brand-yellow/80 transition-all duration-500 shadow-sm"
                                     />
-                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-brand-dark text-white px-3 py-1.5 rounded-xl text-[11px] font-black opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap scale-75 group-hover:scale-100">
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-brand-dark text-white px-3 py-1.5 rounded-xl text-[11px] font-black opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-2xl scale-75 group-hover:scale-100">
                                       €{(h * 1500).toLocaleString()}
                                     </div>
                                   </div>
@@ -3241,7 +2355,7 @@ export default function App() {
 
                        {/* Top/Worst Products */}
                        <div className="space-y-6">
-                          <div className="bg-brand-dark p-8 rounded-[3rem] text-white space-y-6">
+                          <div className="bg-brand-dark p-8 rounded-[3rem] text-white shadow-2xl space-y-6">
                              <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
                                 <TrendingUp className="w-5 h-5 text-green-400" /> Top Venduti
                              </h3>
@@ -3265,7 +2379,7 @@ export default function App() {
                              </div>
                           </div>
 
-                          <div className="bg-white p-8 rounded-[3rem] border border-gray-100 space-y-6">
+                          <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-6">
                              <h3 className="text-lg font-black text-brand-dark uppercase tracking-tighter flex items-center gap-2">
                                 <TrendingDown className="w-5 h-5 text-red-500" /> Meno Venduti
                              </h3>
@@ -3276,7 +2390,7 @@ export default function App() {
                                 ].map((p, i) => (
                                   <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                                      <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                                            <Box className="w-5 h-5 text-gray-300" />
                                         </div>
                                         <div>
@@ -3322,11 +2436,11 @@ export default function App() {
                               </div>
                             </label>
                             {companySettings.imageLogo && (
-                              <div className="w-32 h-32 bg-white border border-gray-100 rounded-2xl p-2 flex items-center justify-center relative">
+                              <div className="w-32 h-32 bg-white border border-gray-100 rounded-2xl p-2 flex items-center justify-center relative shadow-sm">
                                 <img src={companySettings.imageLogo} className="max-w-full max-h-full object-contain" />
                                 <button 
                                   onClick={() => setCompanySettings({...companySettings, imageLogo: ""})}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:scale-110 transition-transform"
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:scale-110 transition-transform"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -3355,11 +2469,11 @@ export default function App() {
                               </div>
                             </label>
                             {companySettings.favicon && (
-                              <div className="w-14 h-14 bg-white border border-gray-100 rounded-xl p-1 flex items-center justify-center relative">
+                              <div className="w-14 h-14 bg-white border border-gray-100 rounded-xl p-1 flex items-center justify-center relative shadow-sm">
                                 <img src={companySettings.favicon} className="w-full h-full object-contain rounded-lg" />
                                 <button 
                                   onClick={() => setCompanySettings({...companySettings, favicon: ""})}
-                                  className="absolute -top-1 -right-1 bg-red-500 text-white p-0.5 rounded-full"
+                                  className="absolute -top-1 -right-1 bg-red-500 text-white p-0.5 rounded-full shadow-lg"
                                 >
                                   <X className="w-2 h-2" />
                                 </button>
@@ -3513,47 +2627,113 @@ export default function App() {
                   </div>
                 )}
 
+                {adminActiveTab === 'marketing' && (
+                  <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-700">
+                    <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden">
+                       <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                       <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+                          <div className="text-center md:text-left space-y-4">
+                             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full backdrop-blur-md border border-white/30 text-[10px] font-black uppercase tracking-widest">
+                                <Target className="w-3.5 h-3.5" /> Marketing Central
+                             </div>
+                             <h2 className="text-[50px] font-black leading-none tracking-tighter uppercase">Potenzia le Vendite</h2>
+                             <p className="text-lg font-bold text-white/80 max-w-xl">Gestisci le tue campagne Meta e Google Ads direttamente dal pannello BesPoint.</p>
+                          </div>
+                          <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/20 text-center min-w-[280px] shadow-2xl">
+                             <p className="text-[10px] font-black uppercase tracking-widest text-white/60 mb-2">Budget Mensile Allocato</p>
+                             <p className="text-5xl font-black">€4.500</p>
+                             <div className="mt-4 flex items-center justify-center gap-2 text-green-300 font-bold">
+                                <TrendingUp className="w-4 h-4" /> +12% vs mese scorso
+                             </div>
+                          </div>
+                       </div>
+                    </div>
 
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                       <div className="bg-white p-10 rounded-[3.5rem] border border-gray-100 shadow-xl space-y-8">
+                          <div className="flex items-center gap-4">
+                             <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
+                                <Facebook className="w-7 h-7" />
+                             </div>
+                             <div>
+                                <h3 className="text-2xl font-black text-brand-dark uppercase tracking-tighter leading-none">Meta Ads Manager</h3>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Facebook & Instagram</p>
+                             </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                             <div className="p-6 bg-gray-50 rounded-3xl space-y-1">
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Impression</p>
+                                <p className="text-2xl font-black text-brand-dark">850k</p>
+                             </div>
+                             <div className="p-6 bg-gray-50 rounded-3xl space-y-1">
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Click</p>
+                                <p className="text-2xl font-black text-brand-dark">12.4k</p>
+                             </div>
+                          </div>
+                          <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-600/20 hover:scale-[1.02] transition-all">Configura Pixel & API</button>
+                       </div>
+
+                       <div className="bg-white p-10 rounded-[3.5rem] border border-gray-100 shadow-xl space-y-8">
+                          <div className="flex items-center gap-4">
+                             <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center shadow-inner">
+                                <Share2 className="w-7 h-7" />
+                             </div>
+                             <div>
+                                <h3 className="text-2xl font-black text-brand-dark uppercase tracking-tighter leading-none">Google Ads Center</h3>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Search & Shopping</p>
+                             </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                             <div className="p-6 bg-gray-50 rounded-3xl space-y-1">
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">ROAS</p>
+                                <p className="text-2xl font-black text-brand-dark">4.2x</p>
+                             </div>
+                             <div className="p-6 bg-gray-50 rounded-3xl space-y-1">
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Conversioni</p>
+                                <p className="text-2xl font-black text-brand-dark">342</p>
+                             </div>
+                          </div>
+                          <button className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-red-600/20 hover:scale-[1.02] transition-all">Collega Merchant Center</button>
+                       </div>
+                    </div>
+                  </div>
+                )}
 
                 {adminActiveTab === 'seo' && (
                   <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-700">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div className="flex justify-between items-end">
                        <div>
-                          <h2 className="text-3xl font-black text-brand-dark uppercase tracking-tighter leading-none mb-2">SEO & Indicizzazione</h2>
-                          <div className="flex items-center gap-2">
-                            <span className="w-8 h-1 bg-brand-yellow rounded-full" />
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Ottimizzazione Motori di Ricerca & Google</p>
-                          </div>
+                          <h2 className="text-[40px] font-black text-brand-dark leading-none tracking-tighter uppercase">SEO & Indicizzazione</h2>
+                          <p className="text-sm font-bold text-gray-400 mt-2 uppercase tracking-[0.2em]">Ottimizza la tua visibilità sui motori di ricerca</p>
                        </div>
-                       <button className="bg-brand-dark text-brand-yellow px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-black transition-all flex items-center gap-3">
-                         <Globe className="w-5 h-5" />
-                         <span>Invia Sitemap</span>
-                       </button>
+                       <div className="flex gap-3">
+                          <button className="px-6 py-3 bg-brand-yellow text-brand-dark rounded-xl font-black uppercase text-xs tracking-widest shadow-lg">Invia Sitemap</button>
+                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                        <div className="lg:col-span-2 space-y-8">
-                          <div className="bg-white p-10 rounded-[3.5rem] border border-gray-100">
+                          <div className="bg-white p-10 rounded-[3.5rem] border border-gray-100 shadow-xl">
                              <h3 className="text-xl font-black text-brand-dark uppercase tracking-tighter mb-8 flex items-center gap-3">
                                 <Globe className="w-6 h-6 text-brand-blue" /> Configurazione Meta Tags Globali
                              </h3>
                              <div className="space-y-6">
                                 <div className="space-y-2">
                                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Meta Title Default</label>
-                                   <input type="text" className="w-full bg-gray-50 border-2 border-transparent rounded-2xl px-6 py-4 font-bold text-brand-dark focus:border-brand-yellow focus:bg-white transition-all font-mono" placeholder="BesPoint | Il meglio del tech e della casa" />
+                                   <input type="text" className="w-full bg-gray-50 border-gray-200 rounded-2xl px-5 py-4 font-bold text-brand-dark shadow-inner" placeholder="BesPoint | Il meglio del tech e della casa" />
                                 </div>
                                 <div className="space-y-2">
                                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Meta Description Default</label>
-                                   <textarea className="w-full bg-gray-50 border-2 border-transparent rounded-2xl px-6 py-4 font-bold text-brand-dark focus:border-brand-yellow focus:bg-white transition-all font-mono" rows={3}></textarea>
+                                   <textarea className="w-full bg-gray-50 border-gray-200 rounded-2xl px-5 py-4 font-bold text-brand-dark shadow-inner" rows={3}></textarea>
                                 </div>
                              </div>
                           </div>
 
-                          <div className="bg-white p-10 rounded-[3.5rem] border border-gray-100">
+                          <div className="bg-white p-10 rounded-[3.5rem] border border-gray-100 shadow-xl">
                              <h3 className="text-xl font-black text-brand-dark uppercase tracking-tighter mb-8 flex items-center gap-3">
-                                <Search className="w-6 h-6 text-brand-blue" /> Generatore Snippet URL Automatico
+                                <Search className="w-6 h-6 text-brand-blue" /> Generatore Snippet URL Automatioco
                              </h3>
-                             <div className="p-8 bg-brand-dark rounded-[2.5rem] text-white space-y-4">
+                             <div className="p-8 bg-brand-dark rounded-[2rem] text-white space-y-4">
                                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Esempio Anteprima Google</p>
                                 <p className="text-blue-400 text-sm font-bold">https://bespoint.it/categoria/lampade-led</p>
                                 <p className="text-lg font-black leading-tight uppercase">Lampade Led Minimal - BesPoint</p>
@@ -3567,7 +2747,7 @@ export default function App() {
                           </div>
                        </div>
 
-                       <div className="bg-white p-10 rounded-[3.5rem] border border-gray-100 space-y-8">
+                       <div className="bg-white p-10 rounded-[3.5rem] border border-gray-100 shadow-xl space-y-8">
                           <h3 className="text-xl font-black text-brand-dark uppercase tracking-tighter flex items-center gap-3">
                              <Activity className="w-6 h-6 text-green-500" /> Health Check SEO
                           </h3>
@@ -3596,6 +2776,8 @@ export default function App() {
                     </div>
                   </div>
                 )}
+
+                 {/* Duplicated Tab Removed */}
 
                 {adminActiveTab === 'slides' && (
                   <div className="w-full">
@@ -3640,7 +2822,7 @@ export default function App() {
                           });
                           setPageSettings({ ...pageSettings, homeSlides: newSlides });
                         }}
-                        className="bg-brand-blue text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-dark transition-all active:scale-95"
+                        className="bg-brand-blue text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-dark transition-all shadow-lg active:scale-95"
                       >
                         Genera Slide per Categoria
                       </button>
@@ -3648,14 +2830,14 @@ export default function App() {
 
                     {/* Home Slides Management */}
                     <div className="space-y-6">
-                                    <div className="bg-white p-5 rounded-3xl border border-gray-100 space-y-4">
+                                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                           <h3 className="text-lg font-black text-brand-dark uppercase tracking-tighter flex items-center gap-2">
                             <span className="w-1.5 h-6 bg-brand-yellow rounded-full"></span>
                             Slide Top (Hero)
                           </h3>
                           
-                          <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                          <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 shadow-inner">
                             <div className="flex items-center">
                               <button 
                                 onClick={() => setAdminTopIdx(prev => Math.max(0, prev - 1))}
@@ -3827,14 +3009,14 @@ export default function App() {
                     </div>
 
                     {/* MIDDLE SLIDES */}
-                      <div className="bg-white p-5 rounded-3xl border border-gray-100 space-y-4">
+                      <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                           <h3 className="text-lg font-black text-brand-dark uppercase tracking-tighter flex items-center gap-2">
                             <span className="w-1.5 h-6 bg-brand-blue rounded-full"></span>
                             Slide Middle
                           </h3>
                           
-                          <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                          <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 shadow-inner">
                             <div className="flex items-center">
                               <button 
                                 onClick={() => setAdminMidIdx(prev => Math.max(0, prev - 1))}
@@ -3993,14 +3175,14 @@ export default function App() {
                       </div>
 
                       {/* BOTTOM SLIDES */}
-                      <div className="bg-white p-5 rounded-3xl border border-gray-100 space-y-4">
+                      <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                           <h3 className="text-lg font-black text-brand-dark uppercase tracking-tighter flex items-center gap-2">
                             <span className="w-1.5 h-6 bg-red-500 rounded-full"></span>
                             Slide Bottom
                           </h3>
                           
-                          <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                          <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 shadow-inner">
                             <div className="flex items-center">
                               <button 
                                 onClick={() => setAdminBotIdx(prev => Math.max(0, prev - 1))}
@@ -4307,7 +3489,7 @@ export default function App() {
                         <button 
                           onClick={handleAiSuggest}
                           disabled={isAiSuggesting}
-                          className="bg-brand-blue text-white px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brand-dark transition-all flex items-center gap-2 disabled:opacity-50"
+                          className="bg-brand-blue text-white px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brand-dark transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
                         >
                           {isAiSuggesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} 
                           Suggerimento AI
@@ -4315,7 +3497,7 @@ export default function App() {
                         {!isAddingCategory ? (
                           <button 
                             onClick={() => setIsAddingCategory(true)}
-                            className="bg-brand-yellow text-brand-dark px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brand-orange transition-all flex items-center gap-2"
+                            className="bg-brand-yellow text-brand-dark px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brand-orange transition-all shadow-md flex items-center gap-2"
                           >
                             <Plus className="w-3 h-3" /> Aggiungi Categoria
                           </button>
@@ -4336,13 +3518,6 @@ export default function App() {
                                     ...pageSettings,
                                     categories: [...pageSettings.categories, newCategoryName],
                                     subcategories: { ...pageSettings.subcategories, [newCategoryName]: [] },
-                                    categorySeo: { 
-                                      ...pageSettings.categorySeo, 
-                                      [newCategoryName]: { 
-                                        metaTitle: `${newCategoryName} di Alta Qualità - BesPoint`, 
-                                        metaDescription: `Scopri la nostra selezione esclusiva di ${newCategoryName}. Qualità garantita, spedizione veloce e i migliori prezzi del mercato su BesPoint.` 
-                                      } 
-                                    },
                                     categoryBanners: { ...pageSettings.categoryBanners, [newCategoryName]: { url: '', alt: '', title: '', link: '' } }
                                   });
                                   setNewCategoryName("");
@@ -4392,7 +3567,7 @@ export default function App() {
                                 });
                                 setAiSuggestions(null);
                               }}
-                              className="bg-brand-yellow text-brand-dark px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brand-orange transition-all"
+                              className="bg-brand-yellow text-brand-dark px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brand-orange transition-all shadow-md"
                             >
                               Applica Tutto
                             </button>
@@ -4589,9 +3764,9 @@ export default function App() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {(pageSettings.linkRapidi || []).map((item: any, idx: number) => (
-                        <div key={item.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 space-y-4 hover:bg-gray-50 transition-all group overflow-hidden">
+                        <div key={item.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 space-y-4 hover:shadow-xl transition-all group overflow-hidden">
                           <div className="flex justify-between items-start">
-                            <div className={`${item.color} w-12 h-12 rounded-2xl flex items-center justify-center`}>
+                            <div className={`${item.color} w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg`}>
                               <Box className="w-6 h-6 text-white" />
                             </div>
                             <button 
@@ -4809,63 +3984,25 @@ export default function App() {
                             <span className="w-1.5 h-6 bg-brand-yellow rounded-full"></span>
                             SEO per Categorie (SERP Preview)
                           </h3>
-                                             {pageSettings.categories.filter((cat: string) => cat !== "Tutti").slice(0, showAllSeoCategories ? pageSettings.categories.length : 3).map((cat: string) => (
-                              <div key={cat} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 space-y-5 group hover:border-brand-yellow transition-all">
-                                <div className="flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100">
-                                  <span className="text-xs font-black uppercase text-brand-blue flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 bg-brand-yellow rounded-full"></span>
-                                    {cat}
-                                  </span>
-                                  <button 
-                                    onClick={() => {
-                                      setPageSettings({
-                                        ...pageSettings,
-                                        categorySeo: {
-                                          ...pageSettings.categorySeo,
-                                          [cat]: {
-                                            metaTitle: `${cat} di Alta Qualità - BesPoint`,
-                                            metaDescription: `Scopri la nostra selezione esclusiva di ${cat}. Qualità garantita, spedizione veloce e i migliori prezzi del mercato su BesPoint.`
-                                          }
-                                        }
-                                      });
-                                    }}
-                                    className="text-[9px] font-black uppercase text-brand-dark bg-brand-yellow px-3 py-1 rounded-lg hover:bg-brand-orange transition-all active:scale-95"
-                                  >
-                                    Autocompila Default
-                                  </button>
+                          <div className="space-y-6">
+                            {CATEGORIES.filter(cat => cat !== "Tutti").slice(0, showAllSeoCategories ? CATEGORIES.length : 3).map(cat => (
+                              <div key={cat} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-4">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs font-black uppercase text-brand-blue">{cat}</span>
+                                  <button className="text-[10px] font-black uppercase text-brand-yellow hover:underline">Autocompila</button>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                  <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Meta Title</label>
-                                    <input 
-                                      className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-bold shadow-sm focus:ring-brand-blue focus:border-brand-blue transition-all"
-                                      placeholder={`Meta Title per ${cat}...`}
-                                      value={pageSettings.categorySeo[cat]?.metaTitle || ""}
-                                      onChange={(e) => setPageSettings({
-                                        ...pageSettings,
-                                        categorySeo: {
-                                          ...pageSettings.categorySeo,
-                                          [cat]: { ...pageSettings.categorySeo[cat], metaTitle: e.target.value }
-                                        }
-                                      })}
-                                    />
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Meta Description</label>
-                                    <input 
-                                      className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-bold shadow-sm focus:ring-brand-blue focus:border-brand-blue transition-all"
-                                      placeholder={`Meta Description per ${cat}...`}
-                                      value={pageSettings.categorySeo[cat]?.metaDescription || ""}
-                                      onChange={(e) => setPageSettings({
-                                        ...pageSettings,
-                                        categorySeo: {
-                                          ...pageSettings.categorySeo,
-                                          [cat]: { ...pageSettings.categorySeo[cat], metaDescription: e.target.value }
-                                        }
-                                      })}
-                                    />
-                                  </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <input 
+                                    className="w-full bg-white border-gray-200 rounded-xl px-4 py-2 text-xs font-bold"
+                                    placeholder={`Meta Title per ${cat}...`}
+                                    defaultValue={`${cat} di Alta Qualità - Acquista su BesPoint`}
+                                  />
+                                  <input 
+                                    className="w-full bg-white border-gray-200 rounded-xl px-4 py-2 text-xs font-bold"
+                                    placeholder={`Meta Description per ${cat}...`}
+                                    defaultValue={`Scopri la nostra selezione esclusiva di ${cat}. Qualità garantita, spedizione veloce e i migliori prezzi del mercato.`}
+                                  />
                                 </div>
 
                                 {/* Google SERP Preview */}
@@ -4876,18 +4013,21 @@ export default function App() {
                                     <span className="text-[#5f6368]">{cat.toLowerCase()}</span>
                                   </div>
                                   <div className="text-[#1a0dab] text-lg font-medium hover:underline cursor-pointer leading-tight mb-1">
-                                    {pageSettings.categorySeo[cat]?.metaTitle || `${cat} di Alta Qualità - BesPoint`}
+                                    {cat} di Alta Qualità - Acquista su BesPoint
                                   </div>
-                                  <div className="text-[#4d5156] text-xs leading-relaxed line-clamp-2">
-                                    {pageSettings.categorySeo[cat]?.metaDescription || `Scopri la nostra selezione esclusiva di ${cat}. Qualità garantita, spedizione veloce e i migliori prezzi del mercato su BesPoint.`}
+                                  <div className="text-[#4d5156] text-xs leading-relaxed">
+                                    Scopri la nostra selezione esclusiva di {cat}. Qualità garantita, spedizione veloce e i migliori prezzi del mercato.
                                   </div>
                                 </div>
                               </div>
                             ))}
-                          {!showAllSeoCategories && pageSettings.categories.length > 3 && (
+                            <button className="w-full py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 transition-all">
+                              Vedi tutte le categorie
+                            </button>
+                          {!showAllSeoCategories && CATEGORIES.length > 3 && (
                             <button 
                               onClick={() => setShowAllSeoCategories(true)}
-                              className="w-full py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 transition-all border border-gray-200">
+                              className="w-full py-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 transition-all">
                               Vedi tutte le categorie
                             </button>
                           )}
@@ -4900,6 +4040,7 @@ export default function App() {
                           )}
                           </div>
                         </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -4943,7 +4084,7 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      <div className="bg-brand-dark p-8 rounded-[3rem] text-white space-y-6 relative overflow-hidden">
+                      <div className="lg:col-span-2 bg-brand-dark p-8 rounded-[3rem] text-white space-y-6 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-yellow rounded-full blur-[100px] opacity-10 -mr-20 -mt-20"></div>
                         <div className="flex justify-between items-center relative z-10">
                           <h3 className="text-xl font-black uppercase tracking-tighter">Traffico Mensile</h3>
@@ -5004,14 +4145,188 @@ export default function App() {
                             </div>
                           ))}
                         </div>
+
+                        <div className="pt-6 border-t border-gray-50">
+                          <label className="block space-y-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">ID Google Analytics (Tracking ID)</span>
+                            <div className="relative">
+                              <BarChart className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-dark/20 w-5 h-5" />
+                              <input 
+                                type="text"
+                                placeholder="G-XXXXXXXXXX"
+                                value={companySettings.googleAnalyticsId || ""}
+                                onChange={(e) => setCompanySettings({...companySettings, googleAnalyticsId: e.target.value})}
+                                className="w-full pl-16 pr-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl text-base font-black focus:border-brand-yellow focus:bg-white transition-all shadow-inner"
+                              />
+                            </div>
+                            <p className="text-[9px] font-bold text-gray-400 p-2 italic leading-relaxed">
+                              * Inserisci il codice di tracciamento per attivare l'invio automatico dei dati a Google.
+                            </p>
+                          </label>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {adminActiveTab === 'marketing' && (
-                  <div className="p-12 text-center text-gray-400 font-bold uppercase tracking-widest bg-white rounded-[3rem] border border-gray-100 shadow-sm">
-                    I controlli per la Vetrina e i Nuovi Arrivi sono stati spostati in <span className="text-brand-yellow bg-brand-dark px-2 py-0.5 rounded ml-1">Gestione Prodotti</span>
+                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h2 className="text-3xl font-black text-brand-dark uppercase tracking-tighter">Marketing & Campagne Adv</h2>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Gestione ROI, Pixel e Performance Canali</p>
+                      </div>
+                      <div className="flex gap-4">
+                        <button className="bg-white border border-gray-100 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-brand-dark shadow-sm hover:bg-gray-50 transition-all flex items-center gap-2">
+                           <FileText className="w-4 h-4" /> Report PDF
+                        </button>
+                        <button className="bg-orange-500 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 hover:scale-[1.02] transition-all flex items-center gap-2">
+                           <Plus className="w-4 h-4" /> Nuova Campagna
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {[
+                        { label: 'Spesa Totale (Spend)', value: '€4.250', change: '+5.2%', isPos: false, icon: DollarSign, color: 'text-orange-500', bg: 'bg-orange-50' },
+                        { label: 'Valore Vendite (Sales)', value: '€21.840', change: '+22.5%', isPos: true, icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-50' },
+                        { label: 'ROAS Totale', value: '5.14x', change: '+0.4x', isPos: true, icon: PieChart, color: 'text-blue-500', bg: 'bg-blue-50' },
+                        { label: 'Costo per ACQ (CPA)', value: '€12,50', change: '-4.1%', isPos: true, icon: Target, color: 'text-purple-500', bg: 'bg-purple-50' }
+                      ].map((stat, i) => (
+                        <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                           <div className="flex justify-between items-start mb-4">
+                              <div className={`p-4 ${stat.bg} rounded-2xl`}>
+                                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                              </div>
+                              <div className={`text-[10px] font-black px-2 py-1 rounded-lg ${stat.isPos ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                {stat.change}
+                              </div>
+                           </div>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</p>
+                           <h4 className="text-3xl font-black text-brand-dark">{stat.value}</h4>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                       <div className="lg:col-span-2 space-y-8">
+                          <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-6">
+                             <div className="flex justify-between items-center">
+                                <h3 className="text-xl font-black text-brand-dark uppercase tracking-tighter">Campagne Attive</h3>
+                                <button className="text-[10px] font-black uppercase text-brand-blue hover:underline">Vedi Tutti i Canali</button>
+                             </div>
+                             <div className="space-y-4">
+                                {[
+                                  { name: 'Sconti Primavera 2024', platform: 'Meta', spend: 1200, sales: 6500, roas: 5.4, status: 'Active' },
+                                  { name: 'Google Search Brand', platform: 'Google', spend: 450, sales: 3200, roas: 7.1, status: 'Active' },
+                                  { name: 'Retargeting Carrello', platform: 'Meta', spend: 850, sales: 4100, roas: 4.8, status: 'Paused' },
+                                  { name: 'Performance Max 01', platform: 'Google', spend: 1750, sales: 8040, roas: 4.6, status: 'Active' }
+                                ].map((camp, i) => (
+                                  <div key={i} className="flex flex-col md:flex-row items-center justify-between p-6 bg-gray-50 rounded-3xl border border-gray-100 group hover:border-brand-yellow/30 transition-all">
+                                     <div className="flex items-center gap-4 flex-1">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${camp.platform === 'Meta' ? 'bg-blue-600' : 'bg-white'}`}>
+                                           {camp.platform === 'Meta' ? <Facebook className="w-6 h-6 text-white" /> : <div className="text-xs font-black text-blue-500">G</div>}
+                                        </div>
+                                        <div>
+                                           <h5 className="text-sm font-black text-brand-dark leading-none mb-1">{camp.name}</h5>
+                                           <span className={`text-[9px] font-bold uppercase ${camp.status === 'Active' ? 'text-green-500':'text-gray-400'}`}>● {camp.status}</span>
+                                        </div>
+                                     </div>
+                                     <div className="grid grid-cols-3 gap-8 mt-4 md:mt-0 text-center md:text-right px-6">
+                                        <div>
+                                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Spend</p>
+                                          <p className="text-sm font-black text-brand-dark">€{camp.spend}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Sales</p>
+                                          <p className="text-sm font-black text-brand-dark">€{camp.sales}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">ROAS</p>
+                                          <p className="text-sm font-black text-green-600">{camp.roas}x</p>
+                                        </div>
+                                     </div>
+                                     <button className="p-3 bg-white text-gray-300 rounded-xl hover:text-brand-dark transition-all md:ml-4">
+                                        <ChevronDown className="w-4 h-4 rotate-270" />
+                                     </button>
+                                  </div>
+                                ))}
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="space-y-8">
+                          <div className="bg-brand-dark p-8 rounded-[3rem] text-white space-y-8 relative overflow-hidden">
+                             <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500 rounded-full blur-[80px] opacity-20 -mr-20 -mt-20"></div>
+                             <h3 className="text-xl font-black uppercase tracking-tighter relative z-10 flex items-center gap-2">
+                                <span className="w-1.5 h-6 bg-brand-yellow rounded-full"></span> Connessione Canali
+                             </h3>
+                             
+                             <div className="space-y-6 relative z-10">
+                                {/* Meta Pixel */}
+                                <div className="space-y-3">
+                                   <div className="flex items-center justify-between">
+                                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Meta Pixel ID</label>
+                                      <span className="text-[8px] font-black bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded uppercase">Connected</span>
+                                   </div>
+                                   <input 
+                                     type="text" 
+                                     placeholder="Inserisci Pixel ID..." 
+                                     className="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:ring-brand-yellow focus:border-brand-yellow"
+                                     value="92384729384729"
+                                     readOnly
+                                   />
+                                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 block">Conversion API Token</label>
+                                   <input 
+                                     type="password" 
+                                     placeholder="EAA..." 
+                                     className="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:ring-brand-yellow focus:border-brand-yellow"
+                                     value="••••••••••••••••••••••••"
+                                     readOnly
+                                   />
+                                </div>
+
+                                <div className="w-full h-px bg-white/10"></div>
+
+                                {/* Google Ads */}
+                                <div className="space-y-3">
+                                   <div className="flex items-center justify-between">
+                                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Google Ads Conversion ID</label>
+                                   </div>
+                                   <input 
+                                     type="text" 
+                                     placeholder="AW-XXXXXXXXX" 
+                                     className="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:ring-brand-yellow focus:border-brand-yellow"
+                                   />
+                                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 block">Conversion Label</label>
+                                   <input 
+                                     type="text" 
+                                     placeholder="Labl_XXXXXXXX" 
+                                     className="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:ring-brand-yellow focus:border-brand-yellow"
+                                   />
+                                </div>
+
+                                <button className="w-full py-5 bg-brand-yellow text-brand-dark rounded-[2rem] text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">
+                                   Salva Configurazione Tracking
+                                </button>
+                             </div>
+                          </div>
+
+                          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 rounded-[3rem] text-white space-y-4 shadow-2xl relative overflow-hidden group">
+                             <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl opacity-10 -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"></div>
+                             <div className="flex items-center gap-3">
+                                <Sparkles className="w-6 h-6 text-brand-yellow" />
+                                <h3 className="text-xl font-black uppercase tracking-tighter">Suggerimenti AI</h3>
+                             </div>
+                             <p className="text-white/60 text-xs font-bold leading-relaxed">
+                                La tua campagna "Sconti Primavera" ha superato il budget previsto ma mantiene un ROAS eccellente. Suggeriamo di scalare il budget del +25%.
+                             </p>
+                             <button className="w-full py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all">
+                                Applica Ottimizzazione
+                             </button>
+                          </div>
+                       </div>
+                    </div>
                   </div>
                 )}
 
@@ -5024,14 +4339,7 @@ export default function App() {
                         {adminProductView === 'mass' && "Importazione Massiva"}
                       </h2>
                       {adminProductView === 'list' && (
-                          <div className="flex gap-4 items-center">
-                            <button 
-                              onClick={() => setShowFeaturedOnly(!showFeaturedOnly)}
-                              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-all border ${showFeaturedOnly ? 'bg-brand-yellow text-brand-dark border-brand-yellow shadow-lg shadow-brand-yellow/20' : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50'}`}
-                            >
-                              <Sparkles className={`w-4 h-4 ${showFeaturedOnly ? 'fill-brand-dark' : ''}`} />
-                              {showFeaturedOnly ? 'Solo Vetrina Attiva' : 'Filtra Vetrina'}
-                            </button>
+                          <div className="flex gap-4">
                             <div className="relative">
                               <button 
                                 onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
@@ -5088,10 +4396,7 @@ export default function App() {
                               <FileSpreadsheet className="w-4 h-4" /> Importa
                             </button>
                             <button 
-                              onClick={() => {
-                                setEditingAdminProduct(null);
-                                setAdminProductView('single');
-                              }}
+                              onClick={() => setAdminProductView('single')}
                               className="bg-brand-dark text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-brand-yellow hover:text-brand-dark transition-all flex items-center gap-2"
                             >
                               <Plus className="w-4 h-4" /> Crea Nuovo
@@ -5109,159 +4414,12 @@ export default function App() {
                     </div>
                     
                     {adminProductView === 'list' && (
-                      <div className="space-y-6">
-                        {/* Limits & Filters Row */}
-                        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
-                           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                              <div className="flex items-center gap-4">
-                                 <div className="w-12 h-12 bg-brand-yellow rounded-2xl flex items-center justify-center shadow-lg shadow-brand-yellow/10">
-                                    <Layers className="w-5 h-5 text-brand-dark" />
-                                 </div>
-                                 <div>
-                                    <h3 className="text-lg font-black uppercase tracking-tighter text-brand-dark">Display Home Controls</h3>
-                                    <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Configura i limiti di visualizzazione per la homepage</p>
-                                 </div>
-                              </div>
-                              
-                              <div className="flex flex-wrap items-center gap-4">
-                                  {/* Featured Toggle */}
-                                  <div className="bg-gray-50 pr-4 pl-2 py-2 rounded-xl border border-gray-100 flex items-center gap-3 group">
-                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input 
-                                          type="checkbox" 
-                                          className="sr-only peer" 
-                                          checked={pageSettings.isFeaturedEnabled} 
-                                          onChange={() => setPageSettings(prev => ({ ...prev, isFeaturedEnabled: !prev.isFeaturedEnabled }))}
-                                        />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-yellow relative shadow-inner"></div>
-                                     </label>
-                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black uppercase text-brand-dark">Vetrina</span>
-                                        <input 
-                                          type="number" 
-                                          value={pageSettings.maxFeatured}
-                                          onChange={e => setPageSettings(prev => ({ ...prev, maxFeatured: Number(e.target.value) }))}
-                                          className="w-12 bg-transparent text-[11px] font-black text-gray-500 focus:outline-none border-b border-gray-200"
-                                        />
-                                     </div>
-                                  </div>
-
-                                  {/* New Arrivals Toggle */}
-                                  <div className="bg-gray-50 pr-4 pl-2 py-2 rounded-xl border border-gray-100 flex items-center gap-3 group">
-                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input 
-                                          type="checkbox" 
-                                          className="sr-only peer" 
-                                          checked={pageSettings.isNewArrivalsEnabled} 
-                                          onChange={() => setPageSettings(prev => ({ ...prev, isNewArrivalsEnabled: !prev.isNewArrivalsEnabled }))}
-                                        />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-yellow relative shadow-inner"></div>
-                                     </label>
-                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black uppercase text-brand-dark">Ultimi Arrivi</span>
-                                        <input 
-                                          type="number" 
-                                          value={pageSettings.maxNewArrivals}
-                                          onChange={e => setPageSettings(prev => ({ ...prev, maxNewArrivals: Number(e.target.value) }))}
-                                          className="w-12 bg-transparent text-[11px] font-black text-gray-500 focus:outline-none border-b border-gray-200"
-                                        />
-                                     </div>
-                                  </div>
-                                  {/* Special Category Toggle */}
-                                  <div className="bg-gray-50 pr-4 pl-2 py-2 rounded-xl border border-gray-100 flex items-center gap-3 group">
-                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input 
-                                          type="checkbox" 
-                                          className="sr-only peer" 
-                                          checked={pageSettings.isSpecialCategoryEnabled} 
-                                          onChange={() => setPageSettings(prev => ({ ...prev, isSpecialCategoryEnabled: !prev.isSpecialCategoryEnabled }))}
-                                        />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-yellow relative shadow-inner"></div>
-                                     </label>
-                                     <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                          <input 
-                                            type="text" 
-                                            value={pageSettings.specialCategoryTitle}
-                                            onChange={e => setPageSettings(prev => ({ ...prev, specialCategoryTitle: e.target.value }))}
-                                            placeholder="Titolo Sezione (es. Speciale Natale)"
-                                            className="bg-transparent text-[10px] font-black uppercase text-brand-dark focus:outline-none border-b border-brand-yellow/30 w-32"
-                                          />
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                          <select 
-                                            value={pageSettings.specialCategoryValue}
-                                            onChange={e => setPageSettings(prev => ({ ...prev, specialCategoryValue: e.target.value, specialSubcategoryValue: "Tutti" }))}
-                                            className="bg-gray-100 text-[9px] font-black uppercase p-1 rounded-md border-none focus:ring-1 focus:ring-brand-yellow max-w-[80px]"
-                                          >
-                                            <option value="">Seleziona...</option>
-                                            {CATEGORIES.filter(c => c !== "Tutti").map(c => <option key={c} value={c}>{c}</option>)}
-                                          </select>
-                                          <select 
-                                            value={pageSettings.specialSubcategoryValue}
-                                            onChange={e => setPageSettings(prev => ({ ...prev, specialSubcategoryValue: e.target.value }))}
-                                            className="bg-gray-100 text-[9px] font-black uppercase p-1 rounded-md border-none focus:ring-1 focus:ring-brand-yellow max-w-[80px]"
-                                          >
-                                            <option value="Tutti">Tutti (Sub)</option>
-                                            {pageSettings.specialCategoryValue && SUBCATEGORIES[pageSettings.specialCategoryValue]?.map((s: string) => <option key={s} value={s}>{s}</option>)}
-                                          </select>
-                                          <div className="flex items-center gap-0.5 ml-1">
-                                            <span className="text-[8px] text-gray-400 font-black uppercase">Qty:</span>
-                                            <input 
-                                              type="number" 
-                                              value={pageSettings.specialCategoryMax}
-                                              onChange={e => setPageSettings(prev => ({ ...prev, specialCategoryMax: Number(e.target.value) }))}
-                                              className="w-6 bg-transparent text-[10px] font-black text-gray-500 focus:outline-none border-none p-0"
-                                            />
-                                          </div>
-                                        </div>
-                                     </div>
-                                  </div>
-                               </div>
-                           </div>
-
-                           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-gray-50">
-                              <div className="md:col-span-2 relative">
-                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                 <input 
-                                   type="text" 
-                                   placeholder="Cerca per Nome, SKU o EAN..." 
-                                   value={adminSearchQuery}
-                                   onChange={e => setAdminSearchQuery(e.target.value)}
-                                   className="w-full bg-gray-50 border-gray-100 rounded-xl py-3 pl-12 pr-4 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all"
-                                 />
-                              </div>
-                              <div className="relative">
-                                 <ListFilter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                 <select 
-                                   value={adminCategoryFilter}
-                                   onChange={e => setAdminCategoryFilter(e.target.value)}
-                                   className="w-full bg-gray-50 border-gray-100 rounded-xl py-3 pl-12 pr-4 text-sm font-bold focus:ring-2 focus:ring-brand-yellow transition-all appearance-none"
-                                 >
-                                   <option value="Tutti">Tutte le Categorie</option>
-                                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                 </select>
-                              </div>
-                              <button 
-                                onClick={() => {
-                                  setAdminSearchQuery("");
-                                  setAdminCategoryFilter("Tutti");
-                                  setShowFeaturedOnly(false);
-                                }}
-                                className="bg-gray-100 text-gray-500 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-gray-200 transition-all"
-                              >
-                                Reset Filtri
-                              </button>
-                           </div>
-                        </div>
-
-                        <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-gray-100">
+                      <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
                         <div className="overflow-x-auto">
                           <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead>
                               <tr className="bg-gray-50 border-b border-gray-100 text-xs font-black uppercase tracking-widest text-gray-400">
                                 <th className="p-4">Prodotto</th>
-                                <th className="p-4 text-center">In Vetrina</th>
                                 <th className="p-4">Categoria / Variante</th>
                                 <th className="p-4">Prezzo Base</th>
                                 <th className="p-4 text-center">Canali Attivi</th>
@@ -5269,18 +4427,7 @@ export default function App() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                              {PRODUCTS.filter(p => {
-                                const matchesSearch = adminSearchQuery === "" || 
-                                  p.name.toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
-                                  (p.sku && p.sku.toLowerCase().includes(adminSearchQuery.toLowerCase())) ||
-                                  (p.ean && p.ean.toLowerCase().includes(adminSearchQuery.toLowerCase())) ||
-                                  `BP-${p.id.padStart(4, '0')}`.toLowerCase().includes(adminSearchQuery.toLowerCase());
-                                
-                                const matchesCategory = adminCategoryFilter === "Tutti" || p.category === adminCategoryFilter;
-                                const matchesFeatured = !showFeaturedOnly || p.isFeatured;
-                                
-                                return matchesSearch && matchesCategory && matchesFeatured;
-                              }).map(p => (
+                              {PRODUCTS.map(p => (
                                 <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                                   <td className="p-4">
                                     <div className="flex items-center gap-4">
@@ -5290,22 +4437,6 @@ export default function App() {
                                         <p className="text-xs text-gray-500 font-medium">SKU: BP-{p.id.padStart(4, '0')}</p>
                                       </div>
                                     </div>
-                                  </td>
-                                  <td className="p-4">
-                                      <div className="flex justify-center">
-                                         <label className="relative inline-flex items-center cursor-pointer group">
-                                            <input 
-                                              type="checkbox" 
-                                              className="sr-only peer" 
-                                              checked={p.isFeatured} 
-                                              onChange={() => {
-                                                p.isFeatured = !p.isFeatured;
-                                                setCartTrigger(c => c + 1); 
-                                              }} 
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-yellow relative shadow-inner group-hover:scale-105 transition-transform"></div>
-                                         </label>
-                                      </div>
                                   </td>
                                   <td className="p-4">
                                     <div className="flex flex-col gap-1">
@@ -5330,10 +4461,7 @@ export default function App() {
                                   </td>
                                   <td className="p-4 text-right">
                                     <button 
-                                      onClick={() => {
-                                        setEditingAdminProduct(p);
-                                        setAdminProductView('single');
-                                      }}
+                                      onClick={() => setAdminProductView('single')}
                                       className="p-2 text-gray-400 hover:text-brand-yellow hover:bg-brand-dark rounded-lg transition-colors inline-block"
                                       title="Modifica Singolo"
                                     >
@@ -5345,19 +4473,11 @@ export default function App() {
                             </tbody>
                           </table>
                         </div>
-                        </div>
                       </div>
                     )}
 
                     {adminProductView === 'single' && (
-                      <AdminSingleProduct 
-                        initialData={editingAdminProduct}
-                        onBack={() => {
-                          setEditingAdminProduct(null);
-                          setAdminProductView('list');
-                          setCartTrigger(c => c + 1); // Ensure list and home update with new changes
-                        }} 
-                      />
+                      <AdminSingleProduct onBack={() => setAdminProductView('list')} />
                     )}
 
                     {adminProductView === 'mass' && (
@@ -5366,194 +4486,13 @@ export default function App() {
                   </div>
                 )}
 
-                {adminActiveTab === 'orders' && <AdminOrders orders={orders} setOrders={setOrders} pageSettings={pageSettings} />}
+                {adminActiveTab === 'orders' && (
+                  <AdminOrders />
+                )}
 
                 {adminActiveTab === 'couriers' && <AdminCouriers />}
                 {adminActiveTab === ('returns' as any) && <AdminReturns />}
                 {adminActiveTab === ('users' as any) && <AdminUsers />}
-
-                {adminActiveTab === 'payments' && (
-                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h2 className="text-3xl font-black text-brand-dark uppercase tracking-tighter">Metodi di Pagamento</h2>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Configura come i tuoi clienti possono pagare gli ordini</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      {/* Stripe Settings */}
-                      <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between border-b border-gray-50 pb-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-                              <CreditCard className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-black uppercase tracking-tighter text-brand-dark">Stripe / Carte</h3>
-                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Credit Cards, Google Pay, Apple Pay</p>
-                            </div>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
-                              checked={paymentSettings.stripeEnabled}
-                              onChange={() => setPaymentSettings(prev => ({ ...prev, stripeEnabled: !prev.stripeEnabled }))}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 relative"></div>
-                          </label>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Chiave Pubblicabile (PK)</span>
-                            <input 
-                              type="text" 
-                              value={paymentSettings.stripeKey}
-                              onChange={e => setPaymentSettings(prev => ({ ...prev, stripeKey: e.target.value }))}
-                              placeholder="pk_live_..." 
-                              className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold placeholder:text-gray-300 focus:ring-2 focus:ring-indigo-500 transition-all" 
-                            />
-                          </label>
-                          <p className="text-[10px] text-gray-400 font-medium italic bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
-                            Stripe accetta automaticamente tutte le principali carte di credito e wallet digitali.
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* PayPal Settings */}
-                      <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between border-b border-gray-50 pb-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-                              <ExternalLink className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-black uppercase tracking-tighter text-brand-dark">PayPal</h3>
-                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Pagamenti diretti e in 3 rate</p>
-                            </div>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
-                              checked={paymentSettings.paypalEnabled}
-                              onChange={() => setPaymentSettings(prev => ({ ...prev, paypalEnabled: !prev.paypalEnabled }))}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 relative"></div>
-                          </label>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Email Business PayPal</span>
-                            <input 
-                              type="email" 
-                              value={paymentSettings.paypalEmail}
-                              onChange={e => setPaymentSettings(prev => ({ ...prev, paypalEmail: e.target.value }))}
-                              placeholder="info@bespoint.it" 
-                              className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold placeholder:text-gray-300 focus:ring-2 focus:ring-blue-500 transition-all" 
-                            />
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Bank Transfer Settings */}
-                      <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm space-y-6 lg:col-span-2">
-                        <div className="flex items-center justify-between border-b border-gray-50 pb-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-600">
-                              <Globe className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-black uppercase tracking-tighter text-brand-dark">Bonifico Bancario</h3>
-                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Pagamento manuale differito</p>
-                            </div>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
-                              checked={paymentSettings.bankEnabled}
-                              onChange={() => setPaymentSettings(prev => ({ ...prev, bankEnabled: !prev.bankEnabled }))}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-600 relative"></div>
-                          </label>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Intestatario Conto</span>
-                            <input 
-                              type="text" 
-                              value={paymentSettings.bankOwner}
-                              onChange={e => setPaymentSettings(prev => ({ ...prev, bankOwner: e.target.value }))}
-                              placeholder="BESPOINT S.R.L." 
-                              className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-gray-400 transition-all" 
-                            />
-                          </label>
-                          <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">IBAN</span>
-                            <input 
-                              type="text" 
-                              value={paymentSettings.bankIban}
-                              onChange={e => setPaymentSettings(prev => ({ ...prev, bankIban: e.target.value }))}
-                              placeholder="IT00 X 00000 00000 000000000000" 
-                              className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-gray-400 transition-all" 
-                            />
-                          </label>
-                          <label className="block md:col-span-2">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Note per il cliente (Visualizzate al checkout)</span>
-                            <textarea 
-                              value={paymentSettings.bankNote}
-                              onChange={e => setPaymentSettings(prev => ({ ...prev, bankNote: e.target.value }))}
-                              rows={2}
-                              className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-gray-400 transition-all resize-none" 
-                            ></textarea>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* COD Settings */}
-                      <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm space-y-6 lg:col-span-2">
-                        <div className="flex items-center justify-between border-b border-gray-50 pb-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600">
-                              <Truck className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-black uppercase tracking-tighter text-brand-dark">Contrassegno (COD)</h3>
-                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Pagamento in contanti alla consegna</p>
-                            </div>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
-                              checked={paymentSettings.codEnabled}
-                              onChange={() => setPaymentSettings(prev => ({ ...prev, codEnabled: !prev.codEnabled }))}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 relative"></div>
-                          </label>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Note Istruzioni per il Cliente</span>
-                            <textarea 
-                              value={paymentSettings.codNote}
-                              onChange={e => setPaymentSettings(prev => ({ ...prev, codNote: e.target.value }))}
-                              placeholder="Es: Assicurati di avere l'importo esatto pronto al momento della consegna." 
-                              rows={2}
-                              className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 transition-all resize-none" 
-                            ></textarea>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {adminActiveTab === 'marketplaces' && (
                   <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
@@ -5574,16 +4513,7 @@ export default function App() {
                             <h3 className="text-xl font-black uppercase tracking-tighter">Amazon SP-API</h3>
                           </div>
                           <label className="inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
-                              checked={pageSettings.enabledMarketplaces?.includes("Amazon")}
-                              onChange={() => {
-                                const current = pageSettings.enabledMarketplaces || [];
-                                const next = current.includes("Amazon") ? current.filter(m => m !== "Amazon") : [...current, "Amazon"];
-                                setPageSettings({ ...pageSettings, enabledMarketplaces: next });
-                              }}
-                            />
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 relative"></div>
                           </label>
                         </div>
@@ -5616,16 +4546,7 @@ export default function App() {
                             <h3 className="text-xl font-black uppercase tracking-tighter">eBay Integration</h3>
                           </div>
                           <label className="inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
-                              checked={pageSettings.enabledMarketplaces?.includes("eBay")}
-                              onChange={() => {
-                                const current = pageSettings.enabledMarketplaces || [];
-                                const next = current.includes("eBay") ? current.filter(m => m !== "eBay") : [...current, "eBay"];
-                                setPageSettings({ ...pageSettings, enabledMarketplaces: next });
-                              }}
-                            />
+                            <input type="checkbox" className="sr-only peer" />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 relative"></div>
                           </label>
                         </div>
