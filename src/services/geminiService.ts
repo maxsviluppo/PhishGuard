@@ -1,6 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+// Ensure VITE_GEMINI_API_KEY is defined in .env
+// Helper to get API key from localStorage or env
+const getApiKey = () => {
+  return localStorage.getItem("phishguard_gemini_api_key") || import.meta.env?.VITE_GEMINI_API_KEY || "";
+};
+
+// Default v1beta is used as it supports JSON mode better on all models
+const ai = new GoogleGenAI({ 
+  apiKey: getApiKey()
+});
 
 export interface AnalysisResult {
   reliabilityScore: number;
@@ -20,84 +29,78 @@ export interface EmailData {
 }
 
 export async function parseEmailContent(rawContent: string): Promise<EmailData> {
-  const model = "gemini-3-flash-preview";
-  
-  const prompt = `
-    Analizza il seguente contenuto grezzo di un'e-mail (formato EML o testo semplice) ed estrai le seguenti informazioni:
-    - Mittente (indirizzo email o nome)
-    - Oggetto dell'e-mail
-    - Corpo principale del messaggio (testo pulito)
-    - Tutti i link (URL) trovati nel messaggio
-    
-    Restituisci i dati in formato JSON con i campi: sender, subject, body, links (array di stringhe).
-    
-    Contenuto e-mail:
-    ---
-    ${rawContent}
-    ---
-  `;
+  // Local parsing of EML/Text content
+  const lines = rawContent.split(/\r?\n/);
+  const headers: Record<string, string> = {};
+  let bodyIndex = -1;
 
-  const response = await ai.models.generateContent({
-    model,
-    contents: [{ parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          sender: { type: Type.STRING },
-          subject: { type: Type.STRING },
-          body: { type: Type.STRING },
-          links: { type: Type.ARRAY, items: { type: Type.STRING } },
-        },
-        required: ["sender", "subject", "body", "links"],
-      },
-    },
-  });
-
-  try {
-    const text = response.text || "{}";
-    const cleanJson = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(cleanJson) as EmailData;
-  } catch (e) {
-    console.error("Failed to parse email content", e);
-    throw new Error("Errore durante l'estrazione dei dati dall'e-mail.");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === "") {
+      bodyIndex = i + 1;
+      break;
+    }
+    const match = line.match(/^([a-zA-Z0-9-]+):\s*(.*)$/i);
+    if (match) {
+      headers[match[1].toLowerCase()] = match[2];
+    }
   }
+
+  const sender = headers["from"] || "Sconosciuto";
+  const subject = headers["subject"] || "Nessun Oggetto";
+  
+  // Extract body and clean it up
+  let body = bodyIndex !== -1 ? lines.slice(bodyIndex).join("\n") : rawContent;
+  
+  // Basic HTML cleanup if present
+  body = body.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  body = body.replace(/<[^>]*>?/gm, " ");
+  body = body.trim();
+
+  // Extract links using regex
+  const linkRegex = /https?:\/\/[^\s<>"]+/g;
+  const links = body.match(linkRegex) || [];
+  const uniqueLinks = Array.from(new Set(links));
+
+  return {
+    sender,
+    subject,
+    body,
+    links: uniqueLinks,
+  };
 }
 
 export async function analyzeMessage(
   text: string,
   sender: string,
   links: string[],
-  imageB64?: string,
-  urlContext?: string
+  imageB64?: string
 ): Promise<AnalysisResult> {
-  const model = "gemini-3-flash-preview";
-  
+  const currentKey = getApiKey();
+  if (!currentKey) {
+    throw new Error("Chiave API Gemini mancante. Impostala cliccando sull'icona ingranaggio.");
+  }
+
+  const ai = new GoogleGenAI({ 
+    apiKey: currentKey,
+    apiVersion: 'v1' 
+  });
+
+  // Put all instructions in the prompt for maximum compatibility
   const prompt = `
-    Analizza questo messaggio per potenziale phishing, smishing o altre minacce informatiche.
+    Sei un esperto di cybersicurezza. Analizza questo messaggio per phishing.
+    Rispondi ESCLUSIVAMENTE in formato JSON puro.
     
-    Dettagli forniti:
-    - Testo del messaggio: ${text || "Non fornito"}
-    - Mittente dichiarato: ${sender || "Non fornito"}
-    - Link inclusi: ${links.join(", ") || "Nessuno"}
-    ${urlContext ? `- URL da analizzare: ${urlContext}` : ""}
+    Dettagli:
+    - Testo: ${text || "Non fornito"}
+    - Mittente: ${sender || "Non fornito"}
+    - Link: ${links.join(", ") || "Nessuno"}
     
-    Se è presente un URL nel contesto, analizza il contenuto di quella pagina per verificare se si tratta di un'e-mail web o di un sito sospetto.
-    Se è presente un'immagine, analizzala per cercare elementi visivi sospetti (loghi contraffatti, errori di formattazione, urgenza artificiale).
-    
-    Restituisci un'analisi dettagliata in formato JSON con i seguenti campi:
-    - reliabilityScore: un numero da 0 a 100 (dove 100 è totalmente affidabile, 0 è una truffa certa).
-    - threatLevel: "Low", "Medium", "High", "Critical".
-    - summary: un breve riassunto dell'analisi in italiano.
-    - redFlags: una lista di segnali di allarme riscontrati.
-    - senderAnalysis: analisi specifica del mittente.
-    - linkAnalysis: analisi specifica dei link forniti.
-    - recommendations: cosa dovrebbe fare l'utente.
+    Formatta il JSON così: 
+    { "reliabilityScore": 0-100, "threatLevel": "Low"|"Medium"|"High"|"Critical", "summary": "italiano", "redFlags": [], "senderAnalysis": "", "linkAnalysis": "", "recommendations": [] }
   `;
 
   const parts: any[] = [{ text: prompt }];
-  
   if (imageB64) {
     parts.push({
       inlineData: {
@@ -107,39 +110,32 @@ export async function analyzeMessage(
     });
   }
 
-  const tools: any[] = [];
-  if (urlContext) {
-    tools.push({ urlContext: {} });
+  const modelsToTry = ["gemini-1.5-flash", "models/gemini-1.5-flash"];
+
+  let lastError = null;
+  for (let modelName of modelsToTry) {
+    try {
+      console.log(`📡 Analizzando con ${modelName}...`);
+      
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: [{ role: 'user', parts: parts }]
+      });
+
+      const resultText = response.text;
+      if (!resultText) throw new Error("Risposta AI vuota");
+
+      console.log(`✅ Successo!`);
+      const cleanJson = resultText.replace(/```json|```/g, "").trim();
+      return JSON.parse(cleanJson) as AnalysisResult;
+
+    } catch (e: any) {
+      console.error(`❌ Errore con ${modelName}:`, e.message || e);
+      lastError = e;
+      if (e.status === 401 || e.status === 403) break;
+      continue;
+    }
   }
 
-  const response = await ai.models.generateContent({
-    model,
-    contents: [{ parts }],
-    config: {
-      tools,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          reliabilityScore: { type: Type.NUMBER },
-          threatLevel: { type: Type.STRING },
-          summary: { type: Type.STRING },
-          redFlags: { type: Type.ARRAY, items: { type: Type.STRING } },
-          senderAnalysis: { type: Type.STRING },
-          linkAnalysis: { type: Type.STRING },
-          recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
-        },
-        required: ["reliabilityScore", "threatLevel", "summary", "redFlags", "senderAnalysis", "linkAnalysis", "recommendations"],
-      },
-    },
-  });
-
-  try {
-    const text = response.text || "{}";
-    const cleanJson = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(cleanJson) as AnalysisResult;
-  } catch (e) {
-    console.error("Failed to parse Gemini response", e);
-    throw new Error("Errore durante l'analisi del messaggio.");
-  }
+  throw new Error(`Errore API: ${lastError?.message || "Verifica la chiave API."}`);
 }

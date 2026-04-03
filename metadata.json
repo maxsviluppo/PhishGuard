@@ -1,5 +1,7 @@
 {
-  "name": "Bespoint Restyling",
-  "description": "Un restyling moderno e compatto per l'e-commerce Bespoint, ispirato alle app native con navigazione modale.",
-  "requestFramePermissions": ["camera"]
+  "name": "Copy of Copy of PhishGuard AI",
+  "description": "Analizzatore intelligente di messaggi per rilevare phishing, smishing e minacce informatiche tramite analisi di testo, immagini e link.",
+  "requestFramePermissions": [
+    "camera"
+  ]
 }
