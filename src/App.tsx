@@ -40,6 +40,7 @@ export default function App() {
   const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [localApiKey, setLocalApiKey] = useState(localStorage.getItem("phishguard_gemini_api_key") || '');
+  const [localModel, setLocalModel] = useState(localStorage.getItem("phishguard_gemini_model") || 'gemini-1.5-flash-8b');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -124,6 +125,7 @@ export default function App() {
 
   const saveSettings = () => {
     localStorage.setItem("phishguard_gemini_api_key", localApiKey);
+    localStorage.setItem("phishguard_gemini_model", localModel);
     setIsSettingsOpen(false);
     setError(null);
   };
@@ -583,10 +585,23 @@ export default function App() {
                   <div className="mt-4 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3 text-xs text-amber-700 leading-relaxed">
                     <Info className="w-5 h-5 shrink-0 mt-0.5" />
                     <p>
-                      Ottieni una chiave gratuita su <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="font-bold underline hover:text-amber-800">Google AI Studio</a>. 
-                      Assicurati di abilitare il modello <strong>gemini-1.5-flash</strong> per l'uso gratuito.
+                      Ottieni una chiave gratuita su <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="font-bold underline hover:text-amber-800">Google AI Studio</a>.
                     </p>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Modello AI da Utilizzare</label>
+                  <select
+                    value={localModel}
+                    onChange={(e) => setLocalModel(e.target.value)}
+                    className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all text-sm font-bold text-slate-800 cursor-pointer"
+                  >
+                    <option value="gemini-1.5-flash-8b">Flash Lite (gemini-1.5-flash-8b) - Ultra Leggero / Gratis</option>
+                    <option value="gemini-1.5-flash">Flash (gemini-1.5-flash) - Veloce / Bilanciato</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash - Nuova Gen</option>
+                    <option value="gemini-1.5-pro">Pro (gemini-1.5-pro) - Massima Precisione</option>
+                  </select>
                 </div>
 
                 <div className="flex gap-3 pt-2">

@@ -82,8 +82,7 @@ export async function analyzeMessage(
   }
 
   const ai = new GoogleGenAI({ 
-    apiKey: currentKey,
-    apiVersion: 'v1' 
+    apiKey: currentKey
   });
 
   // Put all instructions in the prompt for maximum compatibility
@@ -110,16 +109,18 @@ export async function analyzeMessage(
     });
   }
 
-  const modelsToTry = ["gemini-1.5-flash", "models/gemini-1.5-flash"];
+  const selectedModel = typeof window !== 'undefined' ? (localStorage.getItem("phishguard_gemini_model") || "gemini-1.5-flash-8b") : "gemini-1.5-flash-8b";
+  const modelsToTry = Array.from(new Set([selectedModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]));
 
   let lastError = null;
   for (let modelName of modelsToTry) {
     try {
       console.log(`📡 Analizzando con ${modelName}...`);
       
+      const contentsPayload = imageB64 ? parts : prompt;
       const response = await ai.models.generateContent({
         model: modelName,
-        contents: [{ role: 'user', parts: parts }]
+        contents: contentsPayload
       });
 
       const resultText = response.text;
