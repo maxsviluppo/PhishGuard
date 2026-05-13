@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "AppData": {
+      "title": "AppData",
+      "description": "Main application data structure",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["ideation", "development", "testing", "production", "maintenance"] },
+        "description": { "type": "string" },
+        "notes": { "type": "string" },
+        "urgency": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "clientStatus": { "type": "string" },
+        "devPlatform": { "type": "object" },
+        "googleServices": { "type": "object" },
+        "platformUsage": { "type": "object" },
+        "todos": { "type": "array" },
+        "gallery": { "type": "array" },
+        "siteUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "name", "status", "userId"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and access control",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "lastLogin": { "type": "string", "format": "date-time" },
+        "isBlocked": { "type": "boolean" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/apps/{appId}": {
+      "schema": "AppData",
+      "description": "Collection of applications managed by users"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles"
+    }
+  }
+}

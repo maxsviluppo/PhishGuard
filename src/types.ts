@@ -1,22 +1,54 @@
-export interface Product {
+export type AppStatus = 'ideation' | 'development' | 'testing' | 'production' | 'maintenance';
+export type UrgencyLevel = 'low' | 'medium' | 'high' | 'critical';
+
+export interface Todo {
   id: string;
-  name: string;
-  price: number;
-  category: string;
-  subcategory?: string;
-  image: string;
-  description: string;
-  rating: number;
-  reviews: number;
-  specs: Record<string, string>;
-  gallery: string[];
-  has3D?: boolean;
-  videoUrl?: string;
-  isFeatured?: boolean;
-  sku?: string;
-  ean?: string;
+  task: string;
+  completed: boolean;
 }
 
-export interface CartItem extends Product {
-  quantity: number;
+export interface DevPlatform {
+  github: string;
+  vercel: string;
+  domain: string;
+  hosting: string;
+}
+
+export interface GoogleServices {
+  hasProperty: boolean;
+  ads: boolean;
+  admob: boolean;
+  adsense: boolean;
+  analytics: boolean;
+}
+
+export interface PlatformUsage {
+  github: boolean;
+  studioAi: boolean;
+  antigravity: boolean;
+  vercel: boolean;
+  supabase: boolean;
+  firebase: boolean;
+  neon: boolean;
+  domain: boolean;
+  android?: boolean;
+  ios?: boolean;
+}
+
+export interface AppData {
+  id: string;
+  name: string;
+  status: AppStatus;
+  description: string;
+  notes: string;
+  urgency: UrgencyLevel;
+  clientStatus: string;
+  devPlatform: DevPlatform;
+  googleServices: GoogleServices;
+  platformUsage: PlatformUsage;
+  todos: Todo[];
+  gallery: string[];
+  siteUrl: string;
+  createdAt: string;
+  updatedAt: string;
 }

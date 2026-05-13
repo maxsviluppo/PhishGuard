@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: apps
+    // Document ID: {appId}
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required)
+    //   - status: string (required)
+    //   - description: string
+    //   - notes: string
+    //   - urgency: string
+    //   - clientStatus: string
+    //   - devPlatform: map
+    //   - googleServices: map
+    //   - platformUsage: map
+    //   - todos: list
+    //   - gallery: list
+    //   - siteUrl: string
+    //   - createdAt: string
+    //   - updatedAt: string
+    //   - userId: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'castromassimo@gmail.com';
+    }
+
+    match /apps/{appId} {
+      allow read, write: if true;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+    
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+    }
+  }
+}
