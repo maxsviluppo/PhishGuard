@@ -3,1415 +3,611 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
-import { AppData, AppStatus, UrgencyLevel, Todo } from "./types";
-import { LED } from "./components/LED";
-import { Trigger } from "./components/Trigger";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { auth, db } from "./firebase";
+import React, { useState, useRef, useEffect } from 'react';
 import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  setDoc,
-  serverTimestamp,
-  orderBy,
-  getDocFromServer
-} from "firebase/firestore";
-
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId: string | undefined;
-    email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
-  }
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
-
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  render() {
-    if (this.state.hasError) {
-      let errorMessage = "Si è verificato un errore inaspettato.";
-      try {
-        const parsed = JSON.parse(this.state.error?.message || "");
-        if (parsed.error && parsed.error.includes("insufficient permissions")) {
-          errorMessage = "Permessi insufficienti per eseguire l'operazione.";
-        }
-      } catch (e) {
-        // Not a JSON error
-      }
-
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-6 bg-zinc-950 text-white">
-          <AlertTriangle className="w-16 h-16 text-red-500" />
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black tracking-tighter uppercase">ERRORE DI SISTEMA</h2>
-            <p className="text-zinc-500 text-sm max-w-md mx-auto">{errorMessage}</p>
-          </div>
-          <Button onClick={() => window.location.reload()} className="btn-3d-primary h-12 px-8 font-black tracking-widest rounded-xl">
-            RICARICA APPLICAZIONE
-          </Button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
-  signOut,
-  User,
-  setPersistence,
-  browserLocalPersistence,
-  signInAnonymously,
-  signInWithRedirect,
-  getRedirectResult
-} from "firebase/auth";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Settings,
-  Shield,
-  Menu,
-  Users,
-  Ban,
-  UserX,
-  Plus, 
-  Download, 
+  ShieldAlert, 
+  ShieldCheck, 
+  ShieldQuestion, 
   Upload, 
-  Trash2, 
-  ExternalLink, 
-  Github, 
-  Globe, 
-  LayoutDashboard,
-  CheckCircle2,
-  Circle,
-  AlertTriangle,
-  Search,
-  ChevronRight,
-  ChevronLeft,
+  Link as LinkIcon, 
+  User, 
+  MessageSquare, 
+  AlertTriangle, 
+  CheckCircle2, 
+  XCircle,
+  Loader2,
+  ArrowRight,
+  Info,
+  RefreshCcw,
+  Mail,
+  Settings as SettingsIcon,
   X,
-  Brain,
-  Zap,
-  Flame,
-  Database,
-  Triangle,
-  Activity,
-  Image,
-  Link as LinkIcon,
-  LogIn,
-  LogOut,
-  User as UserIcon,
-  Smartphone
-} from "lucide-react";
-
-const STATUS_ORDER: Record<AppStatus, number> = {
-  maintenance: 0,
-  production: 1,
-  testing: 2,
-  development: 3,
-  ideation: 4,
-};
-
-const URGENCY_ORDER: Record<UrgencyLevel, number> = {
-  critical: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
-};
-
-const STATUS_COLORS: Record<AppStatus, "green" | "blue" | "yellow" | "purple" | "red"> = {
-  ideation: "blue",
-  development: "yellow",
-  testing: "purple",
-  production: "green",
-  maintenance: "red",
-};
-
-const STATUS_LABELS: Record<AppStatus, string> = {
-  ideation: "IDEAZIONE",
-  development: "SVILUPPO",
-  testing: "TESTING",
-  production: "PRODUZIONE",
-  maintenance: "MANUTENZIONE",
-};
-
-const URGENCY_COLORS: Record<UrgencyLevel, string> = {
-  low: "bg-blue-500/20 text-blue-400",
-  medium: "bg-yellow-500/20 text-yellow-400",
-  high: "bg-orange-500/20 text-orange-400",
-  critical: "bg-red-500/20 text-red-400",
-};
-
-const URGENCY_LABELS: Record<UrgencyLevel, string> = {
-  low: "BASSA",
-  medium: "MEDIA",
-  high: "ALTA",
-  critical: "URGENTE",
-};
+  Key
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Markdown from 'react-markdown';
+import { analyzeMessage, AnalysisResult, parseEmailContent } from './services/geminiService';
 
 export default function App() {
-  const [apps, setApps] = useState<AppData[]>([]);
-  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [importText, setImportText] = useState("");
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
-  const [appToDeleteId, setAppToDeleteId] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [isDevBypass, setIsDevBypass] = useState(false);
-  const [showRedirectLogin, setShowRedirectLogin] = useState(false);
+  const [text, setText] = useState('');
+  const [sender, setSender] = useState('');
+  const [links, setLinks] = useState('');
+  const [image, setImage] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isParsingEmail, setIsParsingEmail] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [localApiKey, setLocalApiKey] = useState(localStorage.getItem("phishguard_gemini_api_key") || '');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
-  // Auth Listener
   useEffect(() => {
-    console.log("Initializing Auth Listener...");
-    
-    // Ensure persistence is set to local
-    setPersistence(auth, browserLocalPersistence).catch(err => console.error("Persistence Error:", err));
-
-    // Handle redirect result
-    getRedirectResult(auth).then((result) => {
-      if (result?.user) {
-        console.log("Redirect Login Success:", result.user.email);
-        setUser(result.user);
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) setBackendStatus('ok');
+        else setBackendStatus('error');
+      } catch (e) {
+        setBackendStatus('error');
       }
-    }).catch((error) => {
-      console.error("Redirect Result Error:", error);
-    });
-
-    // Fallback timeout: if auth doesn't respond in 10s, force ready state
-    const timeoutId = setTimeout(() => {
-      if (!isAuthReady) {
-        console.warn("Auth initialization timed out, forcing ready state.");
-        setIsAuthReady(true);
-      }
-    }, 10000);
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log("Auth State Changed:", currentUser ? "User Logged In" : "No User");
-      setUser(currentUser);
-      setIsAuthReady(true);
-      clearTimeout(timeoutId);
-    }, (error) => {
-      console.error("Auth Listener Error:", error);
-      setIsAuthReady(true); 
-      clearTimeout(timeoutId);
-    });
-    
-    return () => {
-      unsubscribe();
-      clearTimeout(timeoutId);
     };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000); // Check every 30s
+    return () => clearInterval(interval);
   }, []);
 
-  // Firestore Listener
-  useEffect(() => {
-    if (!isAuthReady) return;
-
-    const path = "apps";
-    console.log("Setting up Firestore Listener for apps...");
-    
-    // Fetch all apps for the open home view
-    const q = query(collection(db, path), orderBy("updatedAt", "desc"));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const appsData = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-      })) as AppData[];
-      setApps(appsData);
-    }, (error) => {
-      console.error("Firestore Apps Error:", error);
-      console.error("Current Path:", path);
-      console.error("Current User:", user?.uid || "Not logged in");
-    });
-
-    return () => unsubscribe();
-  }, [isAuthReady]);
-
-  // Users Listener (Admin)
-  useEffect(() => {
-    if (!user || (user.email !== 'castromassimo@gmail.com' && !isDevBypass)) return;
-
-    const path = "users";
-    console.log("Setting up Admin Users Listener...");
-    const q = query(collection(db, path), orderBy("lastLogin", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.error("Users Listener Error (Admin):", error);
-      // Soft error: don't throw to avoid crashing the app for a secondary feature
-    });
-
-    return () => unsubscribe();
-  }, [user, isDevBypass]);
-
-  // Track user login
-  useEffect(() => {
-    if (user) {
-      const path = `users/${user.uid}`;
-      const userRef = doc(db, "users", user.uid);
-      setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        lastLogin: serverTimestamp(),
-        isBlocked: false
-      }, { merge: true }).catch(error => {
-        handleFirestoreError(error, OperationType.WRITE, path);
-      });
-    }
-  }, [user]);
-
-  // Test connection
-  useEffect(() => {
-    async function testConnection() {
-      try {
-        await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error) {
-        if (error instanceof Error) {
-          if (error.message.includes('the client is offline') || error.message.includes('unavailable')) {
-            console.error("Firestore connection issue detected. Please verify your Firebase project and database status.");
-          }
-        }
-      }
-    }
-    testConnection();
-  }, []);
-
-  const login = async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      prompt: 'select_account'
-    });
-    
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      console.error("Login Error:", error);
-      if (error.code === 'auth/popup-blocked') {
-        setShowRedirectLogin(true);
-        alert("Il popup è stato bloccato. Puoi abilitarlo nella barra degli indirizzi del browser o provare l'accesso con reindirizzamento qui sotto.");
-      } else {
-        alert("Errore durante l'accesso: " + error.message);
-      }
-    }
-  };
-
-  const loginWithRedirect = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithRedirect(auth, provider);
-    } catch (error: any) {
-      console.error("Redirect Login Error:", error);
-      alert("Errore durante il reindirizzamento: " + error.message);
-    }
-  };
-
-  // Manual Login for Admin (Emergency Bypass)
-  const adminManualLogin = async () => {
-    const secret = window.prompt("Inserisci il codice di accesso rapido:");
-    // Simple bypass for the owner in preview mode
-    if (secret === "admin2026") {
-      try {
-        // Use anonymous auth to get a valid session UID
-        await signInAnonymously(auth);
-        setIsDevBypass(true);
-        alert("Accesso di emergenza attivato.");
-      } catch (error) {
-        console.error(error);
-        alert("Errore durante l'accesso di emergenza.");
-      }
-    } else {
-      alert("Codice errato.");
-    }
-  };
-
-  const logout = () => signOut(auth);
-
-  const selectedApp = apps.find(a => a.id === selectedAppId);
-
-  const addApp = async () => {
-    const newAppData: Omit<AppData, 'id'> & { userId: string } = {
-      name: "Nuova Applicazione",
-      status: "ideation",
-      description: "",
-      notes: "",
-      urgency: "medium",
-      clientStatus: "",
-      devPlatform: {
-        github: "",
-        vercel: "",
-        domain: "",
-        hosting: "",
-      },
-      googleServices: {
-        hasProperty: false,
-        ads: false,
-        admob: false,
-        adsense: false,
-        analytics: false,
-      },
-      platformUsage: {
-        github: false,
-        studioAi: false,
-        antigravity: false,
-        vercel: false,
-        supabase: false,
-        firebase: false,
-        neon: false,
-        domain: false,
-        android: false,
-        ios: false,
-      },
-      todos: [],
-      gallery: [],
-      siteUrl: "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      userId: user?.uid || "public",
-    };
-
-    try {
-      const path = "apps";
-      const docRef = await addDoc(collection(db, path), newAppData);
-      setSelectedAppId(docRef.id);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, "apps");
-    }
-  };
-
-  const updateApp = async (id: string, updates: Partial<AppData>) => {
-    try {
-      const path = `apps/${id}`;
-      const appRef = doc(db, "apps", id);
-      await updateDoc(appRef, {
-        ...updates,
-        updatedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `apps/${id}`);
-    }
-  };
-
-  const deleteApp = (id: string) => {
-    setAppToDeleteId(id);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (appToDeleteId) {
-      try {
-        const path = `apps/${appToDeleteId}`;
-        await deleteDoc(doc(db, "apps", appToDeleteId));
-        if (selectedAppId === appToDeleteId) setSelectedAppId(null);
-        setIsDeleteDialogOpen(false);
-        setAppToDeleteId(null);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `apps/${appToDeleteId}`);
-      }
-    }
-  };
-
-  const handleImport = async () => {
-    if (!user) return;
-    const lines = importText.split("\n").filter(l => l.trim());
-    
-    for (const line of lines) {
-      const name = line.trim();
-      const newAppData = {
-        name,
-        status: "ideation",
-        description: "",
-        notes: "",
-        urgency: "medium",
-        clientStatus: "",
-        devPlatform: { github: "", vercel: "", domain: "", hosting: "" },
-        googleServices: { hasProperty: false, ads: false, admob: false, adsense: false, analytics: false },
-        platformUsage: {
-          github: false,
-          studioAi: false,
-          antigravity: false,
-          vercel: false,
-          supabase: false,
-          firebase: false,
-          neon: false,
-          domain: false,
-          android: false,
-          ios: false,
-        },
-        todos: [],
-        gallery: [],
-        siteUrl: "",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: user.uid,
-      };
-      try {
-        await addDoc(collection(db, "apps"), newAppData);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.CREATE, "apps");
-      }
-    }
-    
-    setIsImportOpen(false);
-    setImportText("");
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && selectedApp) {
+    if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const url = event.target?.result as string;
-        updateApp(selectedApp.id, { gallery: [...selectedApp.gallery, url] });
+      reader.onloadend = () => {
+        setImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const formatUrl = (url: string) => {
-    if (!url) return "";
-    const trimmed = url.trim();
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
-    return `https://${trimmed}`;
-  };
-
-  const filteredApps = apps
-    .filter(a => 
-      a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.description.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      // First by urgency (critical first)
-      if (a.urgency !== b.urgency) {
-        return URGENCY_ORDER[a.urgency] - URGENCY_ORDER[b.urgency];
-      }
-      // Then by status (production/maintenance first)
-      return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-    });
-
-  const deleteUser = async (userId: string) => {
-    if (window.confirm("Eliminare definitivamente questo utente?")) {
+  const handleEmailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIsParsingEmail(true);
+      setError(null);
       try {
-        await deleteDoc(doc(db, "users", userId));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+        const text = await file.text();
+        const data = await parseEmailContent(text);
+        setText(data.body);
+        setSender(data.sender);
+        setLinks(data.links.join(', '));
+      } catch (err) {
+        setError('Errore durante la lettura del file e-mail. Assicurati che sia un file .eml o di testo valido.');
+        console.error(err);
+      } finally {
+        setIsParsingEmail(false);
+        if (emailInputRef.current) emailInputRef.current.value = '';
       }
     }
   };
 
-  const toggleBlockUser = async (userId: string, currentStatus: boolean) => {
-    try {
-      await updateDoc(doc(db, "users", userId), { isBlocked: !currentStatus });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+  const handleAnalyze = async () => {
+    if (!text && !image) {
+      setError('Per favore, inserisci un testo o carica un\'immagine del messaggio.');
+      return;
     }
+
+    setIsAnalyzing(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const linkList = links.split(',').map(l => l.trim()).filter(l => l !== '');
+      const analysis = await analyzeMessage(text, sender, linkList, image || undefined);
+      setResult(analysis);
+    } catch (err: any) {
+      setError(`Si è verificato un errore durante l'analisi: ${err.message || 'Riprova più tardi.'}`);
+      console.error(err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const reset = () => {
+    setText('');
+    setSender('');
+    setLinks('');
+    setImage(null);
+    setResult(null);
+    setError(null);
+  };
+
+  const saveSettings = () => {
+    localStorage.setItem("phishguard_gemini_api_key", localApiKey);
+    setIsSettingsOpen(false);
+    setError(null);
+  };
+
+  const getThreatColor = (level: string) => {
+    switch (level) {
+      case 'Low': return 'text-emerald-500 bg-emerald-50 border-emerald-200';
+      case 'Medium': return 'text-amber-500 bg-amber-50 border-amber-200';
+      case 'High': return 'text-orange-500 bg-orange-50 border-orange-200';
+      case 'Critical': return 'text-red-500 bg-red-50 border-red-200';
+      default: return 'text-slate-500 bg-slate-50 border-slate-200';
+    }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-emerald-500';
+    if (score >= 50) return 'text-amber-500';
+    if (score >= 30) return 'text-orange-500';
+    return 'text-red-500';
   };
 
   return (
-    <ErrorBoundary>
-      <div className="flex flex-col md:flex-row h-[100dvh] text-white overflow-hidden font-sans touch-pan-y app-bg">
-      {/* Dynamic Background Lights */}
-      <div className="dynamic-bg-light light-1" />
-      <div className="dynamic-bg-light light-2" />
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-indigo-100">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
+                <ShieldAlert className="w-6 h-6 text-white" />
+              </div>
+              <h1 className="text-2xl font-black tracking-tight text-slate-900">
+                Phish<span className="text-indigo-600">Guard</span>
+              </h1>
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                backendStatus === 'ok' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                backendStatus === 'error' ? 'bg-red-50 text-red-600 border-red-100' : 
+                'bg-slate-50 text-slate-400 border-slate-100'
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  backendStatus === 'ok' ? 'bg-emerald-500 animate-pulse' : 
+                  backendStatus === 'error' ? 'bg-red-500' : 
+                  'bg-slate-300'
+                }`} />
+                {backendStatus === 'ok' ? 'Online' : backendStatus === 'error' ? 'Offline' : 'Checking'}
+              </div>
+            </div>
+          </div>
 
-      {!isAuthReady ? (
-        <div className="flex-1 flex flex-col items-center justify-center z-50">
-          <div className="w-16 h-16 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-cyan-500 animate-pulse">INIZIALIZZAZIONE SISTEMA...</p>
-          <button 
-            onClick={adminManualLogin}
-            className="mt-8 text-[8px] text-zinc-800 hover:text-zinc-600 uppercase tracking-widest font-bold transition-colors"
-          >
-            Accesso Emergenza
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Sidebar - App List */}
-          <div className={`w-full md:w-80 border-r border-white/5 hidden md:flex flex-col glass-panel z-20`}>
-        <div className="p-6 border-b border-white/5 space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 
-              onClick={() => setSelectedAppId(null)}
-              className="text-xl font-black tracking-tighter flex items-center gap-2 text-zinc-100 cursor-pointer hover:opacity-80 transition-opacity"
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all"
+              title="Impostazioni API"
             >
-              <LayoutDashboard className="w-5 h-5 text-zinc-400" />
-              <span className="neon-text-cyan animate-neon-pulse">
-                APPManager
-              </span>
-            </h1>
-            <div className="flex items-center gap-4">
-              {user ? (
-                <div className="flex items-center gap-3">
-                  <div className="hidden md:block text-right">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-100">{user.displayName}</p>
-                    <p className="text-[8px] font-bold text-zinc-500">{user.email}</p>
+              <SettingsIcon className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={reset}
+              className="bg-slate-100 px-4 py-2 rounded-xl text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center gap-2 text-sm font-bold"
+            >
+              <RefreshCcw className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs mt-0.5">Nuova Analisi</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Input Section */}
+          <section className="space-y-6">
+            {/* Email Import & Guide */}
+            <div className="glass-card rounded-3xl p-8 transition-all hover:shadow-2xl hover:shadow-indigo-100/50">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold flex items-center gap-3 text-slate-800">
+                  <div className="p-2 bg-indigo-50 rounded-lg">
+                    <Mail className="w-5 h-5 text-indigo-600" />
                   </div>
-                  <Button onClick={logout} variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5">
-                    <LogOut className="w-4 h-4 led-cyan-glow" />
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={loginWithRedirect} variant="outline" size="icon" className="h-9 w-9 btn-3d-primary border-none">
-                  <LogIn className="w-4 h-4" />
-                </Button>
-              )}
-              <div className="flex gap-3">
-                <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-                  <DialogTrigger render={<Button variant="outline" size="icon" className="h-9 w-9 btn-3d-primary border-none" />}>
-                    <Upload className="w-4 h-4" />
-                  </DialogTrigger>
-                  <DialogContent className="bg-zinc-950 border-white/5 text-white shadow-2xl max-h-[90dvh] overflow-y-auto custom-scrollbar touch-pan-y overscroll-contain">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-black tracking-tight uppercase">IMPORTA APP</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Inserisci nomi (uno per riga)</p>
-                      <Textarea 
-                        value={importText}
-                        onChange={(e) => setImportText(e.target.value)}
-                        placeholder="Nome App 1&#10;Nome App 2&#10;..."
-                        className="min-h-[200px] bg-zinc-800/60 border-white/10 focus:border-cyan-500/50 text-white rounded-xl resize-none"
-                      />
-                      <Button onClick={handleImport} className="w-full btn-3d-primary h-12 font-black tracking-widest sticky bottom-0">
-                        IMPORTA DATI
-                      </Button>
+                  Importa da E-mail
+                </h2>
+                <div className="group relative">
+                  <button className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-indigo-600 transition-all hover:rotate-12">
+                    <Info className="w-4 h-4" />
+                  </button>
+                  <div className="absolute right-0 top-full mt-3 w-72 p-5 bg-white rounded-2xl shadow-2xl border border-slate-100 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all z-30 text-sm text-slate-600 space-y-3 pointer-events-none">
+                    <p className="font-black text-slate-900 border-b border-slate-100 pb-2">Guida all'esportazione</p>
+                    <div className="space-y-2">
+                      <p><span className="font-bold text-indigo-600">Gmail:</span> Apri l'email, clicca su <span className="bg-slate-100 px-1 rounded">⋮</span> e seleziona <span className="italic">"Scarica messaggio"</span>.</p>
+                      <p><span className="font-bold text-indigo-600">Outlook:</span> Vai su <span className="italic">"File" &gt; "Salva con nome"</span> e scegli il formato <span className="font-mono text-[10px] bg-slate-100 px-1 rounded">.eml</span>.</p>
+                      <p><span className="font-bold text-indigo-600">Apple Mail:</span> <span className="italic">"File" &gt; "Salva come..."</span> e scegli <span className="italic">"Sorgente messaggio"</span>.</p>
                     </div>
-                  </DialogContent>
-                </Dialog>
-                <Button onClick={addApp} variant="ghost" size="icon" className="h-9 w-9 btn-3d-black border-none">
-                  <Plus className="w-4 h-4" />
-                </Button>
-                {(user?.email === 'castromassimo@gmail.com' || isDevBypass) && (
-                  <Button onClick={() => setIsAdminOpen(true)} variant="ghost" size="icon" className="h-9 w-9 btn-3d-black border-none">
-                    <Shield className="w-4 h-4" />
-                  </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => emailInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 flex flex-col items-center justify-center gap-4 group/drop ${isParsingEmail ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
+              >
+                <input 
+                  type="file" 
+                  ref={emailInputRef}
+                  onChange={handleEmailUpload}
+                  accept=".eml,.txt"
+                  className="hidden"
+                />
+                {isParsingEmail ? (
+                  <>
+                    <div className="relative">
+                      <Loader2 className="w-12 h-12 animate-spin text-indigo-600" />
+                      <Mail className="w-5 h-5 text-indigo-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <p className="text-sm text-indigo-600 font-black tracking-wide animate-pulse">ESTRAZIONE INTELLIGENTE...</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-4 bg-indigo-50 rounded-2xl group-hover/drop:scale-110 transition-transform duration-500 shadow-sm">
+                      <Mail className="w-8 h-8 text-indigo-600" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-base font-bold text-slate-800">Trascina qui il file .eml</p>
+                      <p className="text-xs text-slate-500 font-medium">I dati verranno analizzati istantaneamente</p>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-            <Input 
-              placeholder="CERCA PROGETTI..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-zinc-800/60 border-white/10 focus:border-cyan-500/50 h-10 text-xs uppercase tracking-widest rounded-xl"
-            />
-          </div>
-        </div>
 
-        <ScrollArea className="flex-1 touch-pan-y custom-scrollbar">
-          <div className="p-3 space-y-2">
-            {filteredApps.map(app => (
-              <button
-                key={app.id}
-                onClick={() => setSelectedAppId(app.id)}
-                className={`w-full p-4 text-left transition-all rounded-xl group relative border border-transparent ${selectedAppId === app.id ? 'bg-white/10 border-white/10 shadow-lg' : 'hover:bg-white/5'}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black tracking-widest uppercase truncate pr-4 text-zinc-100">
-                    {app.name}
-                  </span>
-                  <LED color={STATUS_COLORS[app.status]} />
+            <div className="glass-card rounded-3xl p-8 shadow-sm">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-3 text-slate-800">
+                <div className="p-2 bg-indigo-50 rounded-lg">
+                  <MessageSquare className="w-5 h-5 text-indigo-600" />
                 </div>
-                <div className="flex items-center gap-2">
-                  {app.urgency === 'critical' && (
-                    <Badge variant="outline" className="text-[9px] px-2 py-0.5 border-none uppercase font-black rounded-full bg-red-500/20 text-red-400">
-                      URGENTE
-                    </Badge>
-                  )}
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">
-                    {new Date(app.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
-      </div>
-
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {selectedApp ? <>
-            <div className="p-6 md:p-8 border-b border-white/5 flex items-center justify-between glass-panel">
-              <div className="space-y-2 flex-1">
-                <div className="flex items-center gap-4">
-                  <button 
-                    onClick={() => setSelectedAppId(null)}
-                    className="md:hidden p-2 -ml-2 text-zinc-400 hover:text-white"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
-                  <Input 
-                    value={selectedApp.name}
-                    onChange={(e) => updateApp(selectedApp.id, { name: e.target.value })}
-                    className="text-2xl md:text-3xl font-black tracking-tighter bg-transparent border-none p-0 h-auto focus-visible:ring-0 w-full uppercase text-zinc-100"
+                Dettagli Messaggio
+              </h2>
+              
+              <div className="space-y-4">
+                {/* Text Input */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Contenuto del Messaggio</label>
+                  <textarea 
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="Incolla qui il testo dell'email o dell'SMS..."
+                    className="w-full h-32 px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none bg-slate-50"
                   />
-                  <div className="flex items-center gap-3">
-                    <LED color={STATUS_COLORS[selectedApp.status]} className="w-4 h-4" />
-                    <Button 
-                      variant="destructive" 
-                      size="icon" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteApp(selectedApp.id);
-                      }}
-                      className="h-10 w-10 btn-3d-danger border-none"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </Button>
+                </div>
+
+                {/* Sender Input */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Mittente (Nome o Email)</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text"
+                      value={sender}
+                      onChange={(e) => setSender(e.target.value)}
+                      placeholder="es. Poste Italiane <info@poste-sicura.it>"
+                      className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-slate-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Links Input */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Link nel Messaggio (separati da virgola)</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text"
+                      value={links}
+                      onChange={(e) => setLinks(e.target.value)}
+                      placeholder="https://bit.ly/..., https://poste-it.com/..."
+                      className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-slate-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Screenshot del Messaggio (Opzionale)</label>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${image ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
+                  >
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    {image ? (
+                      <div className="relative inline-block">
+                        <img src={image} alt="Preview" className="max-h-40 rounded-lg shadow-sm" />
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setImage(null); }}
+                          className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md border border-slate-200 hover:text-red-500"
+                        >
+                          <XCircle className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="p-3 bg-white rounded-full shadow-sm">
+                          <Upload className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <p className="text-sm text-slate-600">Trascina un'immagine o clicca per caricare</p>
+                        <p className="text-xs text-slate-400">PNG, JPG fino a 5MB</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+
+              <button 
+                onClick={handleAnalyze}
+                disabled={isAnalyzing}
+                className="w-full mt-8 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 disabled:from-slate-300 disabled:to-slate-300 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-200 transition-all duration-300 flex items-center justify-center gap-3 group active:scale-[0.98]"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    ANALISI IN CORSO...
+                  </>
+                ) : (
+                  <>
+                    ANALIZZA ORA
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform duration-300" />
+                  </>
+                )}
+              </button>
+
+              {error && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-600 text-sm">
+                  <AlertTriangle className="w-5 h-5 shrink-0" />
+                  <p>{error}</p>
+                </div>
+              )}
             </div>
 
-            <Tabs defaultValue="progress" className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="px-4 md:px-8 border-b border-white/5 bg-zinc-950/40 shrink-0">
-                <TabsList className="bg-transparent h-24 p-0 gap-3 overflow-x-auto custom-scrollbar touch-pan-x overscroll-x-contain items-center flex flex-nowrap w-full no-scrollbar md:scrollbar-thin">
-                  <TabsTrigger value="progress" className="shrink-0 data-[state=active]:btn-3d-primary data-[state=active]:text-white data-[state=active]:scale-105 rounded-xl h-12 px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 transition-all border border-white/5 hover:bg-white/5">STATO AVANZAMENTO</TabsTrigger>
-                  <TabsTrigger value="identity" className="shrink-0 data-[state=active]:btn-3d-primary data-[state=active]:text-white data-[state=active]:scale-105 rounded-xl h-12 px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 transition-all border border-white/5 hover:bg-white/5">IDENTITÀ GIOCO</TabsTrigger>
-                  <TabsTrigger value="platforms" className="shrink-0 data-[state=active]:btn-3d-primary data-[state=active]:text-white data-[state=active]:scale-105 rounded-xl h-12 px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 transition-all border border-white/5 hover:bg-white/5">PIATTAFORME</TabsTrigger>
-                  <TabsTrigger value="google" className="shrink-0 data-[state=active]:btn-3d-primary data-[state=active]:text-white data-[state=active]:scale-105 rounded-xl h-12 px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 transition-all border border-white/5 hover:bg-white/5">GOOGLE</TabsTrigger>
-                  <TabsTrigger value="gallery" className="shrink-0 data-[state=active]:btn-3d-primary data-[state=active]:text-white data-[state=active]:scale-105 rounded-xl h-12 px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 transition-all border border-white/5 hover:bg-white/5">GALLERIA</TabsTrigger>
-                  <TabsTrigger value="tasks" className="shrink-0 data-[state=active]:btn-3d-primary data-[state=active]:text-white data-[state=active]:scale-105 rounded-xl h-12 px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 transition-all border border-white/5 hover:bg-white/5">TASK</TabsTrigger>
-                </TabsList>
-              </div>
+            <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
+              <h3 className="text-indigo-900 font-semibold flex items-center gap-2 mb-2">
+                <Info className="w-5 h-5" />
+                Come funziona?
+              </h3>
+              <p className="text-indigo-700 text-sm leading-relaxed">
+                PhishGuard AI utilizza modelli di intelligenza artificiale avanzati per analizzare il contenuto visivo e testuale dei messaggi. Confronta i mittenti, verifica la struttura dei link e identifica pattern comuni utilizzati nelle truffe informatiche per darti un parere esperto in pochi secondi.
+              </p>
+            </div>
+          </section>
 
-              <div className="flex-1 relative min-h-0">
-                <TabsContent value="progress" className="absolute inset-0 m-0 overflow-hidden data-[state=active]:flex flex-col bg-gradient-to-b from-slate-900/50 to-slate-950/50">
-                  <ScrollArea className="h-full w-full custom-scrollbar">
-                    <div className="p-6 md:p-8 pb-40 max-w-md mx-auto space-y-10">
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">FASI DI SVILUPPO</label>
-                        <div className="flex flex-col gap-3">
-                          {(Object.keys(STATUS_COLORS) as AppStatus[]).map(status => (
-                            <Button
-                              key={status}
-                              variant="outline"
-                              onClick={() => updateApp(selectedApp.id, { status })}
-                              className={`h-14 justify-start gap-4 border-white/5 uppercase text-[10px] tracking-widest font-black rounded-xl transition-all ${selectedApp.status === status ? 'bg-white/10 border-white/20 shadow-inner scale-[1.02]' : 'hover:bg-white/5'}`}
-                            >
-                              <LED color={STATUS_COLORS[status]} active={selectedApp.status === status} className="w-3 h-3" />
-                              {STATUS_LABELS[status]}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">PRIORITÀ</label>
-                        <Trigger 
-                          label="URGENTE" 
-                          checked={selectedApp.urgency === 'critical'}
-                          onCheckedChange={(checked) => updateApp(selectedApp.id, { urgency: checked ? 'critical' : 'medium' })}
-                          className="rounded-2xl h-20 px-8"
-                        />
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-
-                <TabsContent value="identity" className="absolute inset-0 m-0 overflow-hidden data-[state=active]:flex flex-col bg-gradient-to-b from-slate-900/50 to-slate-950/50">
-                  <ScrollArea className="h-full w-full custom-scrollbar">
-                    <div className="p-6 md:p-8 pb-40 max-w-4xl mx-auto space-y-10">
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">DESCRIZIONE GIOCO</label>
-                        <Textarea 
-                          value={selectedApp.description}
-                          onChange={(e) => updateApp(selectedApp.id, { description: e.target.value })}
-                          placeholder="DESCRIVI L'IDENTITÀ DEL GIOCO..."
-                          className="min-h-[200px] info-container text-sm p-6 leading-relaxed"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 flex items-center gap-2">
-                            {selectedApp.clientStatus && <LED color="green" className="w-2 h-2" />}
-                            COMMITTENTE
-                          </label>
-                          <Input 
-                            value={selectedApp.clientStatus}
-                            onChange={(e) => updateApp(selectedApp.id, { clientStatus: e.target.value })}
-                            placeholder="NOME COMMITTENTE..."
-                            className="info-container uppercase text-xs tracking-widest h-14 px-6"
-                          />
-                        </div>
-                        <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">NOTE</label>
-                          <Input 
-                            value={selectedApp.notes}
-                            onChange={(e) => updateApp(selectedApp.id, { notes: e.target.value })}
-                            placeholder="NOTE AGGIUNTIVE..."
-                            className="info-container text-xs h-14 px-6"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 flex items-center gap-2">
-                          {selectedApp.siteUrl && <LED color="green" className="w-2 h-2" />}
-                          SITO WEB
-                        </label>
-                        <div className="flex gap-3">
-                          <Input 
-                            value={selectedApp.siteUrl}
-                            onChange={(e) => updateApp(selectedApp.id, { siteUrl: e.target.value })}
-                            placeholder="https://www.esempio.it"
-                            className="info-container text-sm h-14 px-6 flex-1"
-                          />
-                          {selectedApp.siteUrl && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => window.open(formatUrl(selectedApp.siteUrl), '_blank')}
-                              className="h-14 w-14 rounded-xl border-white/5 bg-slate-950/40 hover:bg-white/5 text-zinc-400 hover:text-white transition-all"
-                            >
-                              <ExternalLink className="w-6 h-6" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-
-                <TabsContent value="platforms" className="absolute inset-0 m-0 overflow-hidden data-[state=active]:flex flex-col bg-gradient-to-b from-slate-900/50 to-slate-950/50">
-                  <ScrollArea className="h-full w-full custom-scrollbar">
-                    <div className="p-6 md:p-8 pb-40 max-w-4xl mx-auto space-y-8">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[
-                          { label: "GITHUB", key: "github", icon: Github },
-                          { label: "STUDIO AI GOOGLE", key: "studioAi", icon: Brain },
-                          { label: "ANTIGRAVITY GOOGLE", key: "antigravity", icon: Activity },
-                          { label: "VERCEL", key: "vercel", icon: Triangle },
-                          { label: "SUPABASE", key: "supabase", icon: Database },
-                          { label: "FIREBASE", key: "firebase", icon: Flame },
-                          { label: "NEON", key: "neon", icon: Zap },
-                          { label: "DOMINIO", key: "domain", icon: Globe },
-                          { label: "ANDROID", key: "android", icon: Smartphone },
-                          { label: "IOS", key: "ios", icon: Smartphone },
-                        ].map((platform) => (
-                          <div key={platform.key} className="flex items-center gap-4 p-2">
-                            <platform.icon className="w-5 h-5 text-zinc-500 shrink-0" />
-                            <Trigger 
-                              label={platform.label} 
-                              checked={(selectedApp.platformUsage as any)[platform.key]}
-                              onCheckedChange={(checked) => updateApp(selectedApp.id, { platformUsage: { ...selectedApp.platformUsage, [platform.key]: checked } })}
-                              className="rounded-2xl h-16 px-6 flex-1"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-
-                <TabsContent value="google" className="absolute inset-0 m-0 overflow-hidden data-[state=active]:flex flex-col bg-gradient-to-b from-slate-900/50 to-slate-950/50">
-                  <ScrollArea className="h-full w-full custom-scrollbar">
-                    <div className="p-6 md:p-8 pb-40 max-w-4xl mx-auto space-y-8">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Trigger 
-                          label="GOOGLE PROPERTY" 
-                          checked={selectedApp.googleServices.hasProperty}
-                          onCheckedChange={(checked) => updateApp(selectedApp.id, { googleServices: { ...selectedApp.googleServices, hasProperty: checked } })}
-                          className="rounded-2xl h-16 px-6"
-                        />
-                        {[
-                          { label: "ADS", key: "ads" },
-                          { label: "ADMOB", key: "admob" },
-                          { label: "ADSENSE", key: "adsense" },
-                          { label: "ANALYTICS", key: "analytics" },
-                        ].map((service) => (
-                          <Trigger 
-                            key={service.key}
-                            label={`GOOGLE ${service.label}`} 
-                            checked={(selectedApp.googleServices as any)[service.key]}
-                            onCheckedChange={(checked) => updateApp(selectedApp.id, { googleServices: { ...selectedApp.googleServices, [service.key]: checked } })}
-                            className="rounded-2xl h-16 px-6"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-
-                <TabsContent value="gallery" className="absolute inset-0 m-0 overflow-hidden data-[state=active]:flex flex-col bg-gradient-to-b from-slate-900/50 to-slate-950/50">
-                  <ScrollArea className="h-full w-full custom-scrollbar">
-                    <div className="p-6 md:p-8 pb-40 max-w-4xl mx-auto space-y-8">
-                      <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">IMPORTA DA SISTEMA</label>
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            ref={fileInputRef} 
-                            onChange={handleFileUpload}
-                          />
-                          <Button 
-                            variant="ghost"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full h-16 btn-3d-black border-none rounded-2xl flex items-center justify-center gap-3"
-                          >
-                            <Image className="w-5 h-5" />
-                            SFOGLIA FILE
-                          </Button>
-                        </div>
-                        <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">CARICA DA URL</label>
-                          <div className="flex gap-2">
-                            <Input 
-                              placeholder="INCOLLA URL..."
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const url = e.currentTarget.value;
-                                  if (url) {
-                                    updateApp(selectedApp.id, { gallery: [...selectedApp.gallery, url] });
-                                    e.currentTarget.value = "";
-                                  }
-                                }
-                              }}
-                              className="info-container uppercase text-[10px] tracking-widest h-16 px-6 font-bold flex-1"
-                            />
-                            <Button 
-                              variant="outline"
-                              size="icon"
-                              className="h-16 w-16 rounded-2xl border-white/5 bg-slate-950/40"
-                              onClick={() => {
-                                const input = document.querySelector('input[placeholder="INCOLLA URL..."]') as HTMLInputElement;
-                                if (input.value) {
-                                  updateApp(selectedApp.id, { gallery: [...selectedApp.gallery, input.value] });
-                                  input.value = "";
-                                }
-                              }}
-                            >
-                              <LinkIcon className="w-5 h-5" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {selectedApp.gallery.length === 0 && (
-                          <div className="col-span-full p-16 border-2 border-dashed border-white/5 rounded-3xl text-center">
-                            <p className="text-[10px] text-zinc-600 uppercase tracking-[0.4em] font-black">NESSUNA IMMAGINE CARICATA</p>
-                          </div>
-                        )}
-                        {selectedApp.gallery.map((url, index) => (
-                          <div key={index} className="relative group aspect-video rounded-xl overflow-hidden border border-white/10 shadow-lg">
-                            <img src={url} alt={`Gallery ${index}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Button 
-                                variant="destructive" 
-                                size="icon" 
-                                onClick={() => updateApp(selectedApp.id, { gallery: selectedApp.gallery.filter((_, i) => i !== index) })}
-                                className="h-8 w-8 btn-3d-danger border-none"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+          {/* Results Section */}
+          <section>
+            <AnimatePresence mode="wait">
+              {isAnalyzing ? (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="bg-white rounded-2xl p-12 shadow-sm border border-slate-200 h-full flex flex-col items-center justify-center text-center space-y-6"
+                >
+                  <div className="relative">
+                    <div className="w-24 h-24 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+                    <ShieldQuestion className="w-10 h-10 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                   </div>
-                </ScrollArea>
-              </TabsContent>
-
-                <TabsContent value="tasks" className="absolute inset-0 m-0 overflow-hidden data-[state=active]:flex flex-col bg-gradient-to-b from-slate-900/50 to-slate-950/50">
-                  <ScrollArea className="h-full w-full custom-scrollbar">
-                    <div className="p-6 md:p-8 pb-40 max-w-4xl mx-auto space-y-8">
-                      <div className="flex items-center gap-4">
-                      <Input 
-                        placeholder="AGGIUNGI NUOVO TASK + INVIO"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const task = e.currentTarget.value;
-                            if (task) {
-                              const newTodo: Todo = { id: crypto.randomUUID(), task, completed: false };
-                              updateApp(selectedApp.id, { todos: [...selectedApp.todos, newTodo] });
-                              e.currentTarget.value = "";
-                            }
-                          }
-                        }}
-                        className="info-container uppercase text-xs tracking-[0.2em] h-14 px-6 font-bold"
-                      />
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-slate-900">Analisi Intelligente</h3>
+                    <p className="text-slate-500 max-w-xs mx-auto">
+                      Stiamo verificando link, mittente e contenuto per proteggere la tua identità digitale...
+                    </p>
+                  </div>
+                </motion.div>
+              ) : result ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="space-y-6"
+                >
+                  {/* Score Card */}
+                  <div className="glass-card rounded-3xl p-10 shadow-sm text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <ShieldAlert className="w-32 h-32" />
                     </div>
                     
-                    <div className="space-y-3">
-                      {selectedApp.todos.length === 0 && (
-                        <div className="p-16 border-2 border-dashed border-white/5 rounded-3xl text-center">
-                          <p className="text-[10px] text-zinc-600 uppercase tracking-[0.4em] font-black">SISTEMA IDLE: NESSUN TASK</p>
-                        </div>
-                      )}
-                      {selectedApp.todos.map(todo => (
-                        <div key={todo.id} className="flex items-center justify-between p-5 info-container group transition-all hover:bg-slate-700/80">
-                          <div className="flex items-center gap-5">
-                            <button 
-                              onClick={() => updateApp(selectedApp.id, { 
-                                todos: selectedApp.todos.map(t => t.id === todo.id ? { ...t, completed: !t.completed } : t) 
-                              })}
-                              className="transition-transform active:scale-90"
-                            >
-                              {todo.completed ? <CheckCircle2 className="w-6 h-6 text-green-500" /> : <Circle className="w-6 h-6 text-zinc-700" />}
-                            </button>
-                            <span className={`text-xs uppercase tracking-widest font-bold ${todo.completed ? 'line-through text-zinc-600' : 'text-zinc-200'}`}>
-                              {todo.task}
-                            </span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => updateApp(selectedApp.id, { 
-                              todos: selectedApp.todos.filter(t => t.id !== todo.id) 
-                            })}
-                            className="opacity-0 group-hover:opacity-100 h-10 w-10 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-xl"
-                          >
-                            <X className="w-5 h-5" />
-                          </Button>
-                        </div>
+                    <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-8 border-2 ${getThreatColor(result.threatLevel)}`}>
+                      LIVELLO: {result.threatLevel}
+                    </div>
+                    
+                    <div className="relative inline-block mb-8">
+                      <svg className="w-40 h-40 transform -rotate-90 filter drop-shadow-lg">
+                        <circle
+                          cx="80"
+                          cy="80"
+                          r="72"
+                          stroke="currentColor"
+                          strokeWidth="10"
+                          fill="transparent"
+                          className="text-slate-100"
+                        />
+                        <circle
+                          cx="80"
+                          cy="80"
+                          r="72"
+                          stroke="currentColor"
+                          strokeWidth="10"
+                          fill="transparent"
+                          strokeDasharray={452.4}
+                          strokeDashoffset={452.4 - (452.4 * result.reliabilityScore) / 100}
+                          className={`${getScoreColor(result.reliabilityScore)} transition-all duration-1000 ease-out`}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                        <span className={`text-4xl font-black tracking-tighter ${getScoreColor(result.reliabilityScore)}`}>
+                          {result.reliabilityScore}%
+                        </span>
+                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mt-1">TRUST</p>
+                      </div>
+                    </div>
+
+                    <h3 className="text-2xl font-black text-slate-900 mb-4">Esito Analisi</h3>
+                    <div className="text-slate-600 text-base leading-relaxed prose prose-slate max-w-none font-medium">
+                      <Markdown>{result.summary}</Markdown>
+                    </div>
+                  </div>
+
+                  {/* Red Flags */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                    <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-500" />
+                      Segnali di Allarme
+                    </h4>
+                    <ul className="space-y-3">
+                      {result.redFlags.map((flag, i) => (
+                        <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                          <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                          {flag}
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
-                </ScrollArea>
-                </TabsContent>
-              </div>
-            </Tabs>
-          </>
-        : (
-          <ScrollArea className="flex-1 touch-pan-y custom-scrollbar h-full">
-            <div className="p-6 md:p-12 pb-32 max-w-7xl mx-auto space-y-12">
-              <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <h2 className="text-4xl font-black tracking-tighter uppercase text-zinc-100 hidden md:block">I TUOI PROGETTI</h2>
-                  <div className="md:hidden flex items-center justify-between w-full">
-                    <h1 className="text-3xl font-black tracking-tighter flex items-center gap-2 text-zinc-100">
-                      <LayoutDashboard className="w-8 h-8 text-zinc-400" />
-                      <span className="neon-text-cyan animate-neon-pulse">
-                        APPManager
-                      </span>
-                    </h1>
-                    <div className="flex items-center gap-2">
-                      <Dialog>
-                        <DialogTrigger render={
-                          <Button variant="ghost" size="icon" className="h-10 w-10 btn-3d-black border-none rounded-xl">
-                            <Menu className="w-5 h-5 led-cyan-glow" />
-                          </Button>
-                        } />
-                        <DialogContent className="bg-zinc-950/90 backdrop-blur-xl border-white/5 text-white shadow-2xl p-8 max-w-[300px] rounded-3xl">
-                          <div className="flex flex-col items-center gap-8">
-                            <div className="grid grid-cols-2 gap-6">
-                              <button 
-                                onClick={() => { addApp(); }}
-                                className="flex flex-col items-center gap-2 group"
-                              >
-                                <div className="w-16 h-16 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform led-cyan-glow-border">
-                                  <Plus className="w-8 h-8 text-cyan-400" />
-                                </div>
-                                <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400">NUOVO</span>
-                              </button>
 
-                              <button 
-                                onClick={() => { setIsImportOpen(true); }}
-                                className="flex flex-col items-center gap-2 group"
-                              >
-                                <div className="w-16 h-16 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform led-cyan-glow-border">
-                                  <Upload className="w-8 h-8 text-cyan-400" />
-                                </div>
-                                <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400">IMPORTA</span>
-                              </button>
-
-                              {(user?.email === 'castromassimo@gmail.com' || isDevBypass) && (
-                                <button 
-                                  onClick={() => { setIsAdminOpen(true); }}
-                                  className="flex flex-col items-center gap-2 group col-span-2"
-                                >
-                                  <div className="w-16 h-16 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform led-cyan-glow-border">
-                                    <Shield className="w-8 h-8 text-cyan-400" />
-                                  </div>
-                                  <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400">ADMIN PANEL</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
-                      {user ? (
-                        <Button onClick={logout} variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-white/5">
-                          <LogOut className="w-5 h-5 led-cyan-glow" />
-                        </Button>
-                      ) : (
-                        <Button onClick={loginWithRedirect} variant="outline" size="icon" className="h-10 w-10 btn-3d-primary border-none">
-                          <LogIn className="w-5 h-5" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="relative md:hidden flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-500" />
-                      <Input 
-                        placeholder="CERCA..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 bg-zinc-800/40 border-white/5 h-10 text-[10px] uppercase tracking-widest rounded-xl w-full"
-                      />
-                    </div>
-                    <Badge variant="outline" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 px-4 py-1 font-black tracking-widest shrink-0">
-                      {apps.length} TOTALI
-                    </Badge>
-                  </div>
-                </div>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-[0.4em] font-bold">GESTISCI E MONITORA IL TUO PORTFOLIO APPLICATIVO</p>
-              </div>
-
-              {apps.length === 0 ? (
-                <div className="flex flex-col items-center justify-center text-center py-20 space-y-8 border-2 border-dashed border-white/5 rounded-3xl">
-                  <div className="w-24 h-24 bg-zinc-950/50 rounded-2xl border border-white/5 flex items-center justify-center relative shadow-2xl">
-                    <LayoutDashboard className="w-12 h-12 text-zinc-800" />
-                    <div className="absolute -top-2 -right-2">
-                      <LED color="red" className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h2 className="text-xl font-black tracking-tighter uppercase text-zinc-100">NESSUN PROGETTO TROVATO</h2>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-[0.4em] font-bold">INIZIA CREANDO IL TUO PRIMO PROGETTO</p>
-                  </div>
-                  <Button onClick={addApp} variant="ghost" className="btn-3d-black h-14 px-10 font-black tracking-[0.2em] rounded-2xl border-none">
-                    CREA NUOVO PROGETTO
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredApps.map(app => (
-                    <button
-                      key={app.id}
-                      onClick={() => setSelectedAppId(app.id)}
-                      className="group relative flex flex-col p-6 info-container hover:bg-slate-700/60 transition-all hover:scale-[1.02] text-left border-white/5 hover:border-cyan-500/30"
-                    >
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-2">
-                          <LED color={STATUS_COLORS[app.status]} className="w-3 h-3" />
-                          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                            {STATUS_LABELS[app.status]}
-                          </span>
-                        </div>
-                        {app.urgency === 'critical' && (
-                          <div className="flex items-center gap-2">
-                            <LED color="red" className="w-2 h-2 animate-pulse" />
-                            <Badge variant="outline" className="text-[9px] px-2 py-0.5 border-none uppercase font-black rounded-full bg-red-500/20 text-red-400">
-                              URGENTE
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <h3 className="text-lg font-black tracking-tight uppercase text-zinc-100 truncate group-hover:text-cyan-400 transition-colors">
-                          {app.name}
-                        </h3>
-                        {app.siteUrl && (
-                          <div 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(formatUrl(app.siteUrl), '_blank');
-                            }}
-                            className="p-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400 transition-all shrink-0 led-cyan-glow-border group/link shadow-[0_0_15px_rgba(34,211,238,0.1)] hover:shadow-[0_0_20px_rgba(34,211,238,0.3)]"
-                            title="ACCEDI AL SITO"
-                          >
-                            <ExternalLink className="w-5 h-5 led-cyan-glow group-hover/link:scale-110 transition-transform" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <p className="text-xs text-zinc-500 line-clamp-2 mb-4 h-8">
-                        {app.description || "Nessuna descrizione disponibile."}
+                  {/* Detailed Analysis */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                      <h4 className="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+                        <User className="w-4 h-4 text-indigo-500" />
+                        Analisi Mittente
+                      </h4>
+                      <p className="text-xs text-slate-600 leading-relaxed italic">
+                        {result.senderAnalysis}
                       </p>
-
-                      {app.notes && (
-                        <div className="mb-6 p-3 bg-black/40 rounded-xl border border-white/10">
-                          <p className="text-[12px] text-zinc-200 line-clamp-2 italic leading-relaxed">
-                            "{app.notes}"
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">
-                          ULTIMO AGGIORNAMENTO
-                        </span>
-                        <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-black">
-                          {new Date(app.updatedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                  
-                  <button
-                    onClick={addApp}
-                    className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/5 rounded-2xl hover:border-cyan-500/30 hover:bg-white/5 transition-all group min-h-[200px]"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-zinc-950 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Plus className="w-6 h-6 text-zinc-500 group-hover:text-cyan-400" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-cyan-400">NUOVO PROGETTO</span>
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                      <h4 className="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+                        <LinkIcon className="w-4 h-4 text-indigo-500" />
+                        Analisi Link
+                      </h4>
+                      <p className="text-xs text-slate-600 leading-relaxed italic">
+                        {result.linkAnalysis}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Recommendations */}
+                  <div className="bg-indigo-600 rounded-2xl p-6 shadow-lg shadow-indigo-200 text-white">
+                    <h4 className="font-bold mb-4 flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5" />
+                      Cosa ti consigliamo
+                    </h4>
+                    <ul className="space-y-3">
+                      {result.recommendations.map((rec, i) => (
+                        <li key={i} className="flex items-start gap-3 text-sm font-medium">
+                          <CheckCircle2 className="w-4 h-4 text-indigo-200 shrink-0 mt-0.5" />
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="bg-white rounded-2xl p-12 shadow-sm border border-slate-200 h-full flex flex-col items-center justify-center text-center space-y-6 border-dashed">
+                  <div className="p-6 bg-slate-50 rounded-full">
+                    <ShieldQuestion className="w-12 h-12 text-slate-300" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-slate-400">In attesa di analisi</h3>
+                    <p className="text-slate-400 max-w-xs mx-auto text-sm">
+                      Inserisci i dettagli del messaggio a sinistra per iniziare la verifica di sicurezza.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </AnimatePresence>
+          </section>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="max-w-5xl mx-auto px-4 py-12 text-center">
+        <p className="text-slate-400 text-xs">
+          PhishGuard AI utilizza l'intelligenza artificiale per fornire stime di sicurezza. 
+          Non inserire mai i tuoi dati personali in link sospetti anche se l'affidabilità è alta.
+        </p>
+      </footer>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSettingsOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-4">
+                <button 
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-indigo-50 rounded-2xl">
+                  <Key className="w-6 h-6 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Configurazione AI</h3>
+                  <p className="text-xs text-slate-500 font-medium tracking-tight">Inserisci la tua chiave API di Gemini Flash</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Gemini API Key</label>
+                  <div className="relative group">
+                    <input 
+                      type="password"
+                      value={localApiKey}
+                      onChange={(e) => setLocalApiKey(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all font-mono text-sm group-hover:border-slate-200"
+                    />
+                  </div>
+                  <div className="mt-4 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3 text-xs text-amber-700 leading-relaxed">
+                    <Info className="w-5 h-5 shrink-0 mt-0.5" />
+                    <p>
+                      Ottieni una chiave gratuita su <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="font-bold underline hover:text-amber-800">Google AI Studio</a>. 
+                      Assicurati di abilitare il modello <strong>gemini-1.5-flash</strong> per l'uso gratuito.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={() => setIsSettingsOpen(false)}
+                    className="flex-1 py-4 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button 
+                    onClick={saveSettings}
+                    className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all"
+                  >
+                    SALVA CONFIGURAZIONE
                   </button>
                 </div>
-              )}
-
-              {apps.length > 0 && (
-                <div className="space-y-6 pt-12">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black tracking-tighter uppercase text-zinc-100">RIEPILOGO TABELLARE</h2>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-[0.4em] font-bold">PANORAMICA RAPIDA DELLO STATO DI TUTTI I PROGETTI</p>
-                  </div>
-                  
-                  <div className="info-container overflow-hidden rounded-2xl border-white/5">
-                    <Table>
-                      <TableHeader className="bg-zinc-900/50">
-                        <TableRow className="border-white/5 hover:bg-transparent">
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400">PROGETTO</TableHead>
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400">STATO</TableHead>
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400">URGENZA</TableHead>
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400 md:hidden">NOTE</TableHead>
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400 text-right">ULTIMO AGGIORNAMENTO</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredApps.map((app) => (
-                          <TableRow 
-                            key={app.id} 
-                            className="border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
-                            onClick={() => setSelectedAppId(app.id)}
-                          >
-                            <TableCell className="font-black text-xs uppercase tracking-tight text-zinc-100">{app.name}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <LED color={STATUS_COLORS[app.status]} className="w-2 h-2" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{STATUS_LABELS[app.status]}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {app.urgency === 'critical' ? (
-                                <Badge variant="outline" className="text-[8px] px-2 py-0 border-none uppercase font-black rounded-full bg-red-500/20 text-red-400">
-                                  URGENTE
-                                </Badge>
-                              ) : (
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="md:hidden">
-                              <span className="text-[11px] font-bold text-zinc-300 uppercase truncate max-w-[80px] block">
-                                {app.notes || "-"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                              {new Date(app.updatedAt).toLocaleDateString()}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        )}
-      </div>
-  <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-zinc-950 border-white/5 text-white shadow-2xl max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black tracking-tight uppercase flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 text-red-500" />
-              CONFERMA ELIMINAZIONE
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-6 space-y-4">
-            <p className="text-sm text-zinc-400 leading-relaxed">
-              Sei sicuro di voler eliminare definitivamente questo progetto? Questa azione non può essere annullata.
-            </p>
-            <div className="grid grid-cols-2 gap-4 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsDeleteDialogOpen(false)}
-                className="h-12 border-white/5 hover:bg-white/5 uppercase text-[10px] font-black tracking-widest rounded-xl"
-              >
-                ANNULLA
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={confirmDelete}
-                className="h-12 btn-3d-danger border-none uppercase text-[10px] font-black tracking-widest rounded-xl"
-              >
-                ELIMINA ORA
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAdminOpen} onOpenChange={setIsAdminOpen}>
-        <DialogContent className="bg-zinc-950 border-white/5 text-white shadow-2xl max-w-4xl max-h-[90dvh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="p-6 border-b border-white/5">
-            <DialogTitle className="text-xl font-black tracking-tight uppercase flex items-center gap-3">
-              <Shield className="w-6 h-6 text-cyan-500" />
-              PANNELLO DI CONTROLLO ADMIN
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400">UTENTE</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400">EMAIL</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400">ULTIMO ACCESSO</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-400 text-right">AZIONI</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((u) => (
-                      <TableRow key={u.id} className="border-white/5 hover:bg-white/5">
-                        <TableCell className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center overflow-hidden">
-                            {u.photoURL ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" /> : <UserIcon className="w-4 h-4 text-zinc-500" />}
-                          </div>
-                          <span className="font-black text-xs uppercase tracking-tight text-zinc-100">{u.displayName || 'Utente'}</span>
-                        </TableCell>
-                        <TableCell className="text-[10px] font-bold text-zinc-400">{u.email}</TableCell>
-                        <TableCell className="text-[10px] font-bold text-zinc-500">
-                          {u.lastLogin?.toDate ? u.lastLogin.toDate().toLocaleString() : 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => toggleBlockUser(u.id, u.isBlocked)}
-                              className={`h-8 w-8 rounded-lg ${u.isBlocked ? 'text-red-500 bg-red-500/10' : 'text-zinc-500 hover:text-yellow-500'}`}
-                            >
-                              <Ban className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => deleteUser(u.id)}
-                              className="h-8 w-8 rounded-lg text-zinc-500 hover:text-red-500"
-                            >
-                              <UserX className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
               </div>
-            </ScrollArea>
+            </motion.div>
           </div>
-        </DialogContent>
-      </Dialog>
-        </>
-      )}
-      </div>
-    </ErrorBoundary>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

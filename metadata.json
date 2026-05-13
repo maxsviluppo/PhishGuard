@@ -1,5 +1,7 @@
 {
-  "name": "APPManager",
-  "description": "Aggressive minimal app manager with LED status indicators and modular tracking for developers.",
-  "requestFramePermissions": []
+  "name": "Copy of Copy of PhishGuard AI",
+  "description": "Analizzatore intelligente di messaggi per rilevare phishing, smishing e minacce informatiche tramite analisi di testo, immagini e link.",
+  "requestFramePermissions": [
+    "camera"
+  ]
 }
