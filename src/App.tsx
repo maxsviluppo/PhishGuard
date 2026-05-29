@@ -40,7 +40,7 @@ export default function App() {
   const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [localApiKey, setLocalApiKey] = useState(localStorage.getItem("phishguard_gemini_api_key") || '');
-  const [localModel, setLocalModel] = useState(localStorage.getItem("phishguard_gemini_model") || 'gemini-1.5-flash-8b');
+  const [localModel, setLocalModel] = useState(localStorage.getItem("phishguard_gemini_model") || 'gemini-2.5-flash-lite');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -597,7 +597,8 @@ export default function App() {
                     onChange={(e) => setLocalModel(e.target.value)}
                     className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-indigo-500 transition-all text-sm font-bold text-slate-800 cursor-pointer"
                   >
-                    <option value="gemini-1.5-flash-8b">Flash Lite (gemini-1.5-flash-8b) - Ultra Leggero / Gratis</option>
+                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite - Il più economico / Consigliato</option>
+                    <option value="gemini-1.5-flash-8b">Flash Lite (gemini-1.5-flash-8b) - Vecchia Gen</option>
                     <option value="gemini-1.5-flash">Flash (gemini-1.5-flash) - Veloce / Bilanciato</option>
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash - Nuova Gen</option>
                     <option value="gemini-1.5-pro">Pro (gemini-1.5-pro) - Massima Precisione</option>
